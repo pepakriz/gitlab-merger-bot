@@ -32,6 +32,10 @@ const assigneeOriginalAuthor = async (mergeRequest: MergeRequest) => {
 };
 
 const tryCancelPipeline = async (mergeRequestInfo: MergeRequestInfo, user: User): Promise<void> => {
+	if (mergeRequestInfo.pipeline === null) {
+		return;
+	}
+
 	if (mergeRequestInfo.pipeline.status !== PipelineStatus.Running && mergeRequestInfo.pipeline.status !== PipelineStatus.Pending) {
 		return;
 	}
@@ -80,6 +84,11 @@ const acceptMergeRequest = async (mergeRequest: MergeRequest, user: User): Promi
 		if (mergeRequestInfo.diff_refs.base_sha !== lastCommitOnTarget.id) {
 			await tryCancelPipeline(mergeRequestInfo, user);
 			await gitlabApi.rebaseMergeRequest(mergeRequest);
+			continue;
+		}
+
+		if (mergeRequestInfo.pipeline === null) {
+			console.log(`[MR] Pipeline doesn't exist, retrying`);
 			continue;
 		}
 

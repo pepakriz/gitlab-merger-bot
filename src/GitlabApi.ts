@@ -62,7 +62,7 @@ export interface MergeRequestInfo extends MergeRequest {
 		id: number,
 		sha: string,
 		status: PipelineStatus,
-	};
+	} | null;
 }
 
 export interface DiscussionNote {
