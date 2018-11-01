@@ -1,0 +1,33 @@
+{
+	"name": "gitlab-merger-bot",
+	"description": "GitLab FF merger bot",
+	"license": "MIT",
+	"scripts": {
+		"dev": "nodemon --watch 'src/**/*.*' --exec babel-node --extensions '.ts' src/index.ts",
+		"start": "node lib",
+		"build": "babel src --out-dir lib --extensions '.ts'",
+		"check": "yarn run check:cs && yarn run check:types",
+		"check:cs": "tslint -c tslint.json 'src/**/*.ts'",
+		"check:types": "tsc --noEmit",
+		"fix:cs": "tslint -c tslint.json 'src/**/*.ts' --fix"
+	},
+	"dependencies": {
+		"env-var": "^3.4.0",
+		"node-fetch": "^2.2.0"
+	},
+	"devDependencies": {
+		"@babel/cli": "^7.1.2",
+		"@babel/core": "^7.1.2",
+		"@babel/node": "^7.0.0",
+		"@babel/plugin-proposal-class-properties": "^7.1.0",
+		"@babel/plugin-proposal-object-rest-spread": "^7.0.0",
+		"@babel/preset-env": "^7.1.0",
+		"@babel/preset-typescript": "^7.1.0",
+		"@types/node": "^10.12.0",
+		"@types/node-fetch": "^2.1.2",
+		"nodemon": "^1.18.5",
+		"ts-node": "^7.0.1",
+		"tslint": "^5.11.0",
+		"typescript": "^3.1.3"
+	}
+}
