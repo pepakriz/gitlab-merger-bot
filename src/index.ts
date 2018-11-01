@@ -13,6 +13,7 @@ import {
 
 process.on('unhandledRejection', (error) => {
 	console.error('unhandledRejection', error);
+	process.exit(1);
 });
 
 const GITLAB_URL = env.get('GITLAB_URL', 'https://gitlab.com').asUrlString();
