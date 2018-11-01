@@ -6,6 +6,8 @@
 		"dev": "nodemon --watch 'src/**/*.*' --exec babel-node --extensions '.ts' src/index.ts",
 		"start": "node lib",
 		"build": "babel src --out-dir lib --extensions '.ts'",
+		"build-docker-image": "docker build -t pepakriz/gitlab-merger-bot:latest .",
+		"build-bin": "pkg -t node10-alpine-x64 lib/index.js --output ./gitlab-merger-bot",
 		"check": "yarn run check:cs && yarn run check:types",
 		"check:cs": "tslint -c tslint.json 'src/**/*.ts'",
 		"check:types": "tsc --noEmit",
@@ -26,6 +28,7 @@
 		"@types/node": "^10.12.0",
 		"@types/node-fetch": "^2.1.2",
 		"nodemon": "^1.18.5",
+		"pkg": "^4.3.4",
 		"ts-node": "^7.0.1",
 		"tslint": "^5.11.0",
 		"typescript": "^3.1.3"
