@@ -15,12 +15,14 @@ RUN set -ex \
 FROM alpine:3.8
 CMD ["/bin/gitlab-merger-bot"]
 ENV NODE_ENV=production
+ENV DATA_DIR=/data
 
 RUN set -ex \
 	&& apk --no-cache --update add \
 		git \
 		ca-certificates \
 		libstdc++ \
-		libgcc
+		libgcc \
+	&& mkdir -p /data
 
 COPY --from=build /app/gitlab-merger-bot /bin/

@@ -1,4 +1,5 @@
 import * as env from 'env-var';
+import * as fs from 'fs';
 import {
 	DiscussionNote,
 	GitlabApi,
@@ -20,11 +21,14 @@ const GITLAB_URL = env.get('GITLAB_URL', 'https://gitlab.com').asUrlString();
 const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
 const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asInt() * 1000;
 const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asInt() * 1000;
+const dataDir = env.get('DATA_DIR', `${__dirname}/../data/repository`).asString();
 
-const repositoryDir = `${__dirname}/../data`;
+if (!fs.existsSync(dataDir)) {
+	throw new Error(`Data directory ${dataDir} does not exist`);
+}
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN, repositoryDir);
+const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN, dataDir);
 
 const assigneeOriginalAuthor = async (mergeRequest: MergeRequest) => {
 	await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
