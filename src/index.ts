@@ -19,8 +19,8 @@ process.on('unhandledRejection', (error) => {
 
 const GITLAB_URL = env.get('GITLAB_URL', 'https://gitlab.com').asUrlString();
 const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
-const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asInt() * 1000;
-const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asInt() * 1000;
+const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asIntPositive() * 1000;
+const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asIntPositive() * 1000;
 const dataDir = env.get('DATA_DIR', `${__dirname}/../data/repository`).asString();
 
 if (!fs.existsSync(dataDir)) {
