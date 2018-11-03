@@ -4,13 +4,8 @@ export class Queue {
 
 	private promise?: Promise<void>;
 	private readonly jobs: {[key: string]: Job} = {};
-	private readonly onEmptyQueue: () => any;
 
-	constructor(onEmptyQueue: () => any = () => {}) {
-		this.onEmptyQueue = onEmptyQueue;
-	}
-
-	public appendJob(jobId: string, job: Job): void {
+	public runJob(jobId: string, job: Job): Promise<void> {
 		this.jobs[jobId] = job;
 
 		if (this.promise === undefined) {
@@ -23,7 +18,7 @@ export class Queue {
 						return;
 					}
 
-					const currentJob = this.jobs[jobIds[0]];
+					const currentJob = await this.jobs[jobIds[0]];
 
 					try {
 						await currentJob();
@@ -33,8 +28,10 @@ export class Queue {
 
 					delete this.jobs[jobIds[0]];
 				}
-			}).then(this.onEmptyQueue);
+			});
 		}
+
+		return this.promise;
 	}
 
 }
