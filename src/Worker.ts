@@ -5,14 +5,12 @@ export class Worker {
 
 	private queues: Queue[] = [];
 
-	public addJobToQueue(queueId: number, jobId: string, job: Job): void {
+	public addJobToQueue(queueId: number, jobId: string, job: Job): Promise<void> {
 		if (typeof this.queues[queueId] === 'undefined') {
-			this.queues[queueId] = new Queue(() => {
-				delete this.queues[queueId];
-			});
+			this.queues[queueId] = new Queue();
 		}
 
-		this.queues[queueId].appendJob(jobId, job);
+		return this.queues[queueId].runJob(jobId, job);
 	}
 
 }
