@@ -3,6 +3,7 @@ import { Git } from './Git';
 
 export interface User {
 	id: number;
+	name: string;
 }
 
 export enum MergeStatus {
@@ -148,7 +149,7 @@ export class GitlabApi {
 		const sourceProject = await this.getProject(mergeRequest.source_project_id);
 		const targetProject = await this.getProject(mergeRequest.target_project_id);
 
-		const git = await Git.create(this.repositoryDir);
+		const git = await Git.create(`${this.repositoryDir}/${mergeRequest.target_project_id}`);
 
 		const remoteRepositories = [
 			targetProject.path_with_namespace,

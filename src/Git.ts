@@ -9,7 +9,9 @@ export class Git {
 		this.repositoryDir = repositoryDir;
 
 		if (!fs.existsSync(this.repositoryDir)) {
-			fs.mkdirSync(this.repositoryDir);
+			fs.mkdirSync(this.repositoryDir, {
+				recursive: true,
+			});
 		}
 	}
 

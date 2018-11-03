@@ -11,6 +11,7 @@ import {
 	RequestMethod,
 	User,
 } from './GitlabApi';
+import { Worker } from './Worker';
 
 process.on('unhandledRejection', (error) => {
 	console.error('unhandledRejection', error);
@@ -21,14 +22,15 @@ const GITLAB_URL = env.get('GITLAB_URL', 'https://gitlab.com').asUrlString();
 const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
 const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asIntPositive() * 1000;
 const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asIntPositive() * 1000;
-const dataDir = env.get('DATA_DIR', `${__dirname}/../data/repository`).asString();
+const dataDir = env.get('DATA_DIR', `${__dirname}/../data`).asString();
 
 if (!fs.existsSync(dataDir)) {
 	throw new Error(`Data directory ${dataDir} does not exist`);
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN, dataDir);
+const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN, `${dataDir}/repository`);
+const worker = new Worker();
 
 const assigneeOriginalAuthor = async (mergeRequest: MergeRequest) => {
 	await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
@@ -164,22 +166,7 @@ const acceptMergeRequest = async (mergeRequest: MergeRequest, user: User): Promi
 	}
 };
 
-let mergeRequestQueue: MergeRequest[] = [];
-
-const runMergeRequestLoop = async (user: User) => {
-	while (true) {
-		const currentMergeRequest = mergeRequestQueue.shift();
-		if (currentMergeRequest === undefined) {
-			await sleep(1000);
-			continue;
-		}
-
-		console.log(`[MR] Starting accepting merge request ${currentMergeRequest.web_url}`);
-		await acceptMergeRequest(currentMergeRequest, user);
-	}
-};
-
-const runMergeRequestCheckerLoop = async () => {
+const runMergeRequestCheckerLoop = async (user: User) => {
 	console.log('[bot] Checking assigned merge requests');
 	const mergeRequests = await gitlabApi.getAssignedOpenedMergeRequests();
 
@@ -210,14 +197,25 @@ const runMergeRequestCheckerLoop = async () => {
 		return mergeRequest;
 	});
 
-	mergeRequestQueue = (await Promise.all(newMergeRequestQueue))
-		.filter((mergeRequest?: MergeRequest) => (mergeRequest !== undefined)) as MergeRequest[];
+	(await Promise.all(newMergeRequestQueue))
+		.forEach((mergeRequest?: MergeRequest) => {
+			if (mergeRequest === undefined) {
+				return;
+			}
 
-	setTimeout(runMergeRequestCheckerLoop, MR_CHECK_INTERVAL);
+			worker.addJobToQueue(
+				mergeRequest.target_project_id,
+				`accept-merge-${mergeRequest.id}`,
+				() => acceptMergeRequest(mergeRequest, user),
+			);
+		});
+
+	setTimeout(() => runMergeRequestCheckerLoop(user), MR_CHECK_INTERVAL);
 };
 
 (async () => {
 	const user = await gitlabApi.getMe();
-	await runMergeRequestCheckerLoop();
-	runMergeRequestLoop(user);
+	console.log(`[bot] Hi, I'm ${user.name}. I'll accept merge request assigned to me.`);
+
+	await runMergeRequestCheckerLoop(user);
 })();
