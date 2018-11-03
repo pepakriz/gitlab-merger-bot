@@ -2,9 +2,28 @@
 
 [![Build Status](https://travis-ci.org/pepakriz/gitlab-merger-bot.svg)](https://travis-ci.org/pepakriz/gitlab-merger-bot)
 
+
+## Pre-Installation requirements
+
+#### Get the auth token
+
+1) Create a new account for your bot-user
+2) Sign-in to GitLab as bot-user and go to [https://gitlab.com/profile/personal_access_tokens](https://gitlab.com/profile/personal_access_tokens)
+3) Add new personal access token with `api` scope
+
+> We strongly recommend using a separate account for bot-user. Don't reuse existing account which can leave the project in future.
+
+#### Setup GitLab repository
+
+1) Make sure that your bot-user has privileges to accept merge requests
+2) In `General Settings - Merge Request` section:
+	* set `Merge method` to `Fast-forward merge`
+	* check `Only allow merge requests to be merged if the pipeline succeeds`
+
+
 ## Usage
 
-### Running in docker
+#### Running in docker
 
 ```bash
 docker run -d --name gitlab-merger-bot --restart on-failure \
@@ -14,7 +33,7 @@ docker run -d --name gitlab-merger-bot --restart on-failure \
 	pepakriz/gitlab-merger-bot:latest
 ```
 
-### Running as a plain JS app
+#### Running as a plain JS app
 
 ```bash
 yarn install
@@ -22,12 +41,7 @@ yarn run build
 GITLAB_AUTH_TOKEN="<token>" yarn run start
 ```
 
-#### How to get the auth token
-
-1) Sig-in to GitLab and go to [https://gitlab.com/profile/personal_access_tokens](https://gitlab.com/profile/personal_access_tokens)
-2) Add new personal access token with `api` scope
-
-### Configuration options
+#### Configuration options
 
 | Env variable | Default value |  |
 |-------------------|--------------------|-------------------|
