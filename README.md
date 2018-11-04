@@ -48,4 +48,4 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `GITLAB_URL` | `https://gitlab.com` | GitLab instance URL  |
 | `GITLAB_AUTH_TOKEN` |  | `required` Your GitLab token |
 | `CI_CHECK_INTERVAL` | `10` | Time between CI checks (in seconds) |
-| `MR_CHECK_INTERVAL` | `20` | Time between merge-requests checks (in second) |
+| `MR_CHECK_INTERVAL` | `20` | Time between merge-requests checks (in seconds) |
