@@ -1,12 +1,25 @@
-import { Job } from './types';
-
 export class Queue {
 
 	private promise?: Promise<void>;
-	private readonly jobs: {[key: string]: Job} = {};
+	private readonly jobs: { [key: string]: () => any } = {};
+	private readonly promises: { [key: string]: Promise<any> } = {};
 
-	public runJob(jobId: string, job: Job): Promise<void> {
-		this.jobs[jobId] = job;
+	public hasJob(jobId: string): boolean {
+		return typeof this.promises[jobId] !== 'undefined';
+	}
+
+	public runJob<T extends Promise<any>>(jobId: string, job: () => T): T {
+		if (typeof this.promises[jobId] !== 'undefined') {
+			throw new Error(`JobId ${jobId} is already in queue`);
+		}
+
+		const jobPromise = new Promise((resolve) => {
+			this.jobs[jobId] = async () => {
+				resolve(await job());
+			};
+		});
+
+		this.promises[jobId] = jobPromise;
 
 		if (this.promise === undefined) {
 			this.promise = new Promise(async (resolve, reject) => {
@@ -31,7 +44,7 @@ export class Queue {
 			});
 		}
 
-		return this.promise;
+		return jobPromise as T;
 	}
 
 }

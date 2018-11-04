@@ -52,6 +52,12 @@ export enum PipelineStatus {
 	Skipped = 'skipped',
 }
 
+export interface MergeRequestPipeline {
+	id: number;
+	sha: string;
+	status: PipelineStatus;
+}
+
 export interface MergeRequestInfo extends MergeRequest {
 	sha: string;
 	diff_refs: {
@@ -59,11 +65,7 @@ export interface MergeRequestInfo extends MergeRequest {
 		base_sha: string,
 		head_sha: string,
 	};
-	pipeline: {
-		id: number,
-		sha: string,
-		status: PipelineStatus,
-	} | null;
+	pipeline: MergeRequestPipeline | null;
 }
 
 export interface DiscussionNote {
@@ -143,6 +145,12 @@ export class GitlabApi {
 
 	public async cancelPipeline(projectId: number, pipelineId: number): Promise<void> {
 		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/pipelines/${pipelineId}/cancel`, RequestMethod.Post);
+	}
+
+	public async createMergeRequestNote(projectId: number, mergeRequestIid: number, body: string): Promise<void> {
+		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/notes`, RequestMethod.Post, {
+			body,
+		});
 	}
 
 	public async rebaseMergeRequest(mergeRequest: MergeRequest): Promise<void> {
