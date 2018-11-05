@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import fetch, { RequestInit, Response } from 'node-fetch';
 import { Git } from './Git';
 
@@ -158,6 +159,12 @@ export class GitlabApi {
 	public async rebaseMergeRequest(mergeRequest: MergeRequest): Promise<void> {
 		const sourceProject = await this.getProject(mergeRequest.source_project_id);
 		const targetProject = await this.getProject(mergeRequest.target_project_id);
+
+		if (!fs.existsSync(this.repositoryDir)) {
+			fs.mkdirSync(this.repositoryDir, {
+				recursive: true,
+			});
+		}
 
 		const git = await Git.create(`${this.repositoryDir}/${mergeRequest.target_project_id}`);
 
