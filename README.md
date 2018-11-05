@@ -49,3 +49,4 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `GITLAB_AUTH_TOKEN` |  | `required` Your GitLab token |
 | `CI_CHECK_INTERVAL` | `10` | Time between CI checks (in seconds) |
 | `MR_CHECK_INTERVAL` | `20` | Time between merge-requests checks (in seconds) |
+| `REMOVE_BRANCH_AFTER_MERGE` | `true` | It marks MR to be removed after merge |
