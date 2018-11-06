@@ -2,14 +2,13 @@ export class Queue {
 
 	private promise?: Promise<void>;
 	private readonly jobs: { [key: string]: () => any } = {};
-	private readonly promises: { [key: string]: Promise<any> } = {};
 
 	public hasJob(jobId: string): boolean {
-		return typeof this.promises[jobId] !== 'undefined';
+		return typeof this.jobs[jobId] !== 'undefined';
 	}
 
 	public runJob<T extends Promise<any>>(jobId: string, job: () => T): T {
-		if (typeof this.promises[jobId] !== 'undefined') {
+		if (typeof this.jobs[jobId] !== 'undefined') {
 			throw new Error(`JobId ${jobId} is already in queue`);
 		}
 
@@ -18,8 +17,6 @@ export class Queue {
 				resolve(await job());
 			};
 		});
-
-		this.promises[jobId] = jobPromise;
 
 		if (this.promise === undefined) {
 			this.promise = new Promise(async (resolve, reject) => {
@@ -33,13 +30,13 @@ export class Queue {
 
 					const currentJob = await this.jobs[jobIds[0]];
 
+					delete this.jobs[jobIds[0]];
+
 					try {
 						await currentJob();
 					} catch (e) {
 						reject(e);
 					}
-
-					delete this.jobs[jobIds[0]];
 				}
 			});
 		}

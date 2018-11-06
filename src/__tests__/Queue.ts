@@ -21,4 +21,6 @@ it('runs again after done', async () => {
 	expect(job.mock.calls.length).toBe(1);
 	await queue.runJob('barJob', job);
 	expect(job.mock.calls.length).toBe(2);
+	await queue.runJob('barJob', job);
+	expect(job.mock.calls.length).toBe(3);
 });
