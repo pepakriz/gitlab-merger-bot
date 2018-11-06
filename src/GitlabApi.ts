@@ -5,6 +5,7 @@ import { Git } from './Git';
 export interface User {
 	id: number;
 	name: string;
+	email: string;
 }
 
 export enum MergeStatus {
@@ -156,7 +157,7 @@ export class GitlabApi {
 		});
 	}
 
-	public async rebaseMergeRequest(mergeRequest: MergeRequest): Promise<void> {
+	public async rebaseMergeRequest(mergeRequest: MergeRequest, user: User): Promise<void> {
 		const sourceProject = await this.getProject(mergeRequest.source_project_id);
 		const targetProject = await this.getProject(mergeRequest.target_project_id);
 
@@ -185,6 +186,9 @@ export class GitlabApi {
 				}
 			}
 		});
+
+		await git.run(`config user.name "${user.name}"`);
+		await git.run(`config user.email "${user.email}"`);
 
 		await git.run(`fetch ${targetProject.path_with_namespace} ${mergeRequest.target_branch}`);
 		await git.run(`fetch ${sourceProject.path_with_namespace} ${mergeRequest.source_branch}`);

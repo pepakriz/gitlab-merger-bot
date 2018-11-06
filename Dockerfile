@@ -23,8 +23,6 @@ RUN set -ex \
 		ca-certificates \
 		libstdc++ \
 		libgcc \
-	&& mkdir -p /data \
-	&& git config --global user.name "John Doe" \
-	&& git config --global user.email johndoe@example.com
+	&& mkdir -p /data
 
 COPY --from=build /app/gitlab-merger-bot /bin/

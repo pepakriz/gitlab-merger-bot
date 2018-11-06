@@ -106,7 +106,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			console.log(`[MR] source branch is not up to date, rebasing`);
 			await Promise.all([
 				tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
-				gitlabApi.rebaseMergeRequest(mergeRequest),
+				gitlabApi.rebaseMergeRequest(mergeRequest, user),
 			]);
 			continue;
 		}
