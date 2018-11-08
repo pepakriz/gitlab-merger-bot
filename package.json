@@ -15,7 +15,7 @@
 		"fix:cs": "tslint -c tslint.json 'src/**/*.ts' --fix"
 	},
 	"dependencies": {
-		"env-var": "^3.4.0",
+		"env-var": "^3.4.1",
 		"node-fetch": "^2.2.0"
 	},
 	"devDependencies": {
