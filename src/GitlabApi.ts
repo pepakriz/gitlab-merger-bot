@@ -40,11 +40,13 @@ export interface MergeRequest {
 	work_in_progress: boolean;
 	state: MergeState;
 	force_remove_source_branch: boolean;
+	labels: string[];
 }
 
 interface MergeRequestUpdateData {
 	assignee_id?: number;
 	remove_source_branch?: boolean;
+	labels?: string;
 }
 
 export enum PipelineStatus {

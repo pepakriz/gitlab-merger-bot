@@ -62,6 +62,21 @@ interface AcceptMergeRequestOptions {
 	ciInterval: number;
 }
 
+export enum BotLabels {
+	InMergeQueue = 'in-merge-queue',
+	Rebasing = 'rebasing',
+	Accepting = 'accepting',
+	WaitingForPipeline = 'waiting-for-pipeline',
+}
+
+const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
+
+export const filterBotLabels = (labels: string[]) => {
+	const values = Object.values(BotLabels);
+
+	return labels.filter((label) => !values.includes(label));
+};
+
 export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
 	let mergeRequestInfo;
 	let lastCommitOnTarget;
@@ -107,13 +122,26 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			await Promise.all([
 				tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
 				gitlabApi.rebaseMergeRequest(mergeRequest, user),
+				gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+					labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
+				}),
 			]);
 			continue;
 		}
 
 		if (mergeRequestInfo.pipeline === null) {
-			await sleep(options.ciInterval);
+			const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
+
+			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
+				tasks.push(
+					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
+					}),
+				);
+			}
+
 			console.log(`[MR] Pipeline doesn't exist, retrying`);
+			await Promise.all(tasks);
 			continue;
 		}
 
@@ -182,7 +210,17 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			throw new Error('Invalid response');
 		}
 
+		const promises: Array<Promise<any>> = [sleep(options.ciInterval)];
+
+		if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
+			promises.push(
+				gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+					labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
+				}),
+			);
+		}
+
 		console.log(`[MR] Merge request is processing`);
-		await sleep(options.ciInterval);
+		await Promise.all(promises);
 	}
 };
