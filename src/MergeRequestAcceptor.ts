@@ -82,6 +82,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 	let lastCommitOnTarget;
 
 	while (true) {
+		const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
 		mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
 
 		if (mergeRequestInfo.assignee !== null && mergeRequestInfo.assignee.id !== user.id) {
@@ -130,8 +131,6 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.pipeline === null) {
-			const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
-
 			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
 				tasks.push(
 					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
@@ -151,8 +150,16 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.pipeline.status === PipelineStatus.Running || mergeRequestInfo.pipeline.status === PipelineStatus.Pending) {
-			await sleep(options.ciInterval);
+			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
+				tasks.push(
+					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
+					}),
+				);
+			}
+
 			console.log(`[MR] Waiting for CI. Current status: ${mergeRequestInfo.pipeline.status}`);
+			await Promise.all(tasks);
 			continue;
 		}
 
@@ -210,10 +217,8 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			throw new Error('Invalid response');
 		}
 
-		const promises: Array<Promise<any>> = [sleep(options.ciInterval)];
-
 		if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
-			promises.push(
+			tasks.push(
 				gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
 					labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
 				}),
@@ -221,6 +226,6 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		console.log(`[MR] Merge request is processing`);
-		await Promise.all(promises);
+		await Promise.all(tasks);
 	}
 };
