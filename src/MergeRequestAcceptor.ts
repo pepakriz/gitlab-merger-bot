@@ -119,14 +119,17 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		lastCommitOnTarget = await gitlabApi.getLastCommitOnTarget(mergeRequest.project_id, mergeRequest.target_branch);
 		if (mergeRequestInfo.diff_refs.base_sha !== lastCommitOnTarget.id) {
+			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
+			});
 			console.log(`[MR] source branch is not up to date, rebasing`);
 			await Promise.all([
 				tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
 				gitlabApi.rebaseMergeRequest(mergeRequest, user),
-				gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
-					labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
-				}),
 			]);
+			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
+			});
 			continue;
 		}
 
@@ -145,7 +148,16 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.pipeline.sha !== mergeRequestInfo.sha) {
+			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
+				tasks.push(
+					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
+					}),
+				);
+			}
+
 			console.log(`[MR] Unexpected pipeline sha, retrying`);
+			await Promise.all(tasks);
 			continue;
 		}
 
