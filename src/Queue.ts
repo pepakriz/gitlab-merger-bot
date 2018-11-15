@@ -12,9 +12,14 @@ export class Queue {
 			throw new Error(`JobId ${jobId} is already in queue`);
 		}
 
-		const jobPromise = new Promise((resolve) => {
+		const jobPromise = new Promise((resolve, reject) => {
 			this.jobs[jobId] = async () => {
-				resolve(await job());
+				try {
+					resolve(await job());
+				} catch (e) {
+					reject(e);
+				}
+				delete this.jobs[jobId];
 			};
 		});
 
@@ -29,8 +34,6 @@ export class Queue {
 					}
 
 					const currentJob = await this.jobs[jobIds[0]];
-
-					delete this.jobs[jobIds[0]];
 
 					try {
 						await currentJob();
