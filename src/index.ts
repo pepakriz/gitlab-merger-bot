@@ -32,9 +32,10 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 	const assignedMergeRequests = await gitlabApi.getAssignedOpenedMergeRequests();
 	const possibleToAcceptMergeRequests = assignedMergeRequests.map(async (mergeRequest: MergeRequest) => {
 		if (REMOVE_BRANCH_AFTER_MERGE && !mergeRequest.force_remove_source_branch) {
-			console.log(`[MR] Marking MR to be removed after merge`);
+			console.log(`[MR] Marking MR to be squashed and branch removed after merge`);
 			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
 				remove_source_branch: true,
+				squash: true,
 			});
 		}
 
