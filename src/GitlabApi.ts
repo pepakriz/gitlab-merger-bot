@@ -46,6 +46,7 @@ export interface MergeRequest {
 interface MergeRequestUpdateData {
 	assignee_id?: number;
 	remove_source_branch?: boolean;
+	squash?: boolean;
 	labels?: string;
 }
 
