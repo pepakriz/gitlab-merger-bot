@@ -1,4 +1,5 @@
 import fetch, { RequestInit, Response } from 'node-fetch';
+import queryString from 'querystring';
 
 export interface User {
 	id: number;
@@ -101,12 +102,10 @@ export class GitlabApi {
 
 	private readonly gitlabUrl: string;
 	private readonly authToken: string;
-	private readonly repositoryDir: string;
 
-	constructor(gitlabUrl: string, authToken: string, repositoryDir: string) {
+	constructor(gitlabUrl: string, authToken: string) {
 		this.gitlabUrl = gitlabUrl;
 		this.authToken = authToken;
-		this.repositoryDir = repositoryDir;
 	}
 
 	public async getMe(): Promise<User> {
@@ -151,15 +150,13 @@ export class GitlabApi {
 	}
 
 	public async rebaseMergeRequest(projectId: number, mergeRequestIid: number): Promise<void> {
-		await this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/rebase`, RequestMethod.Put);
+		const response = await this.sendRawRequest(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/rebase`, RequestMethod.Put);
+		this.validateResponseStatus(response);
 	}
 
 	private async sendRequestWithSingleResponse(url: string, method: RequestMethod, body?: object): Promise<any> {
 		const response = await this.sendRawRequest(url, method, body);
-
-		if (response.status === 401) {
-			throw new Error('Unauthorized');
-		}
+		this.validateResponseStatus(response);
 
 		const data = await response.json();
 		if (typeof data !== 'object' && data.id === undefined) {
@@ -172,14 +169,7 @@ export class GitlabApi {
 
 	private async sendRequestWithMultiResponse(url: string, method: RequestMethod, body?: object): Promise<any> {
 		const response = await this.sendRawRequest(url, method, body);
-
-		if (response.status === 401) {
-			throw new Error('Unauthorized');
-		}
-
-		if (response.status === 403) {
-			throw new Error('Forbidden');
-		}
+		this.validateResponseStatus(response);
 
 		const data = await response.json();
 		if (!Array.isArray(data)) {
@@ -188,6 +178,20 @@ export class GitlabApi {
 		}
 
 		return data;
+	}
+
+	private validateResponseStatus(response: Response): void {
+		if (response.status === 401) {
+			throw new Error('Unauthorized');
+		}
+
+		if (response.status === 403) {
+			throw new Error('Forbidden');
+		}
+
+		if (response.status < 200 || response.status >= 300) {
+			throw new Error('Unexpected status code');
+		}
 	}
 
 	public sendRawRequest(url: string, method: RequestMethod, body?: object): Promise<Response> {
@@ -200,7 +204,11 @@ export class GitlabApi {
 		};
 
 		if (body !== undefined) {
-			options.body = JSON.stringify(body);
+			if (method === RequestMethod.Get) {
+				url = url + '?' + queryString.stringify(body);
+			} else {
+				options.body = JSON.stringify(body);
+			}
 		}
 
 		return fetch(`${this.gitlabUrl}${url}`, options);
