@@ -1,6 +1,4 @@
-import * as fs from 'fs';
 import fetch, { RequestInit, Response } from 'node-fetch';
-import { Git } from './Git';
 
 export interface User {
 	id: number;
@@ -41,6 +39,7 @@ export interface MergeRequest {
 	state: MergeState;
 	force_remove_source_branch: boolean;
 	labels: string[];
+	squash: boolean;
 }
 
 interface MergeRequestUpdateData {
@@ -73,6 +72,8 @@ export interface MergeRequestInfo extends MergeRequest {
 		head_sha: string,
 	};
 	pipeline: MergeRequestPipeline | null;
+	diverged_commits_count: number;
+	rebase_in_progress: boolean;
 }
 
 export interface DiscussionNote {
@@ -82,16 +83,6 @@ export interface DiscussionNote {
 
 export interface MergeRequestDiscussion {
 	notes: DiscussionNote[];
-}
-
-interface Commit {
-	id: string;
-}
-
-interface Project {
-	id: number;
-	ssh_url_to_repo: string;
-	path_with_namespace: string;
 }
 
 interface Pipeline {
@@ -122,16 +113,15 @@ export class GitlabApi {
 		return this.sendRequestWithSingleResponse(`/api/v4/user`, RequestMethod.Get);
 	}
 
-	public async getLastCommitOnTarget(projectId: number, branch: string): Promise<Commit> {
-		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/repository/commits/${branch}`, RequestMethod.Get);
-	}
-
 	public async getAssignedOpenedMergeRequests(): Promise<MergeRequest[]> {
 		return this.sendRequestWithMultiResponse(`/api/v4/merge_requests?scope=assigned_to_me&state=opened`, RequestMethod.Get);
 	}
 
 	public async getMergeRequestInfo(projectId: number, mergeRequestIid: number): Promise<MergeRequestInfo> {
-		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}`, RequestMethod.Get);
+		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}`, RequestMethod.Get, {
+			include_diverged_commits_count: true,
+			include_rebase_in_progress: true,
+		});
 	}
 
 	public async getMergeRequestDiscussions(projectId: number, mergeRequestIid: number): Promise<MergeRequestDiscussion[]> {
@@ -160,62 +150,8 @@ export class GitlabApi {
 		});
 	}
 
-	public async rebaseMergeRequest(mergeRequest: MergeRequest, user: User): Promise<void> {
-		const sourceProject = await this.getProject(mergeRequest.source_project_id);
-		const targetProject = await this.getProject(mergeRequest.target_project_id);
-
-		if (!fs.existsSync(this.repositoryDir)) {
-			fs.mkdirSync(this.repositoryDir, {
-				recursive: true,
-			});
-		}
-
-		const git = await Git.create(`${this.repositoryDir}/${mergeRequest.target_project_id}`);
-
-		const remoteRepositories = [
-			targetProject.path_with_namespace,
-		];
-
-		if (targetProject.path_with_namespace !== sourceProject.path_with_namespace) {
-			remoteRepositories.push(sourceProject.path_with_namespace);
-		}
-
-		remoteRepositories.forEach(async (remoteRepository: string) => {
-			try {
-				await git.run(`remote add ${remoteRepository} ${this.gitlabUrl}:${this.authToken}@gitlab.com/${remoteRepository}.git`);
-			} catch (e) {
-				if (e.message.indexOf(`fatal: remote ${remoteRepository} already exists.`) === -1) {
-					throw e;
-				}
-			}
-		});
-
-		await git.run(`config user.name "${user.name}"`);
-		await git.run(`config user.email "${user.email}"`);
-
-		await git.run(`fetch ${targetProject.path_with_namespace} ${mergeRequest.target_branch}`);
-		await git.run(`fetch ${sourceProject.path_with_namespace} ${mergeRequest.source_branch}`);
-
-		await git.run(`checkout ${targetProject.path_with_namespace}/${mergeRequest.target_branch}`);
-
-		try {
-			await git.run(`branch -D ${mergeRequest.source_branch}`);
-		} catch (e) {
-			if (e.message.indexOf(`error: branch '${mergeRequest.source_branch}' not found.`) === -1) {
-				throw e;
-			}
-		}
-
-		await git.run(`checkout -b ${mergeRequest.source_branch} ${sourceProject.path_with_namespace}/${mergeRequest.source_branch}`);
-		await git.run(`rebase ${targetProject.path_with_namespace}/${mergeRequest.target_branch} ${mergeRequest.source_branch}`);
-
-		await git.run(`push --force-with-lease ${sourceProject.path_with_namespace} ${mergeRequest.source_branch}:${mergeRequest.source_branch}`);
-		await git.run(`checkout ${targetProject.path_with_namespace}/${mergeRequest.target_branch}`);
-		await git.run(`branch -D ${mergeRequest.source_branch}`);
-	}
-
-	private async getProject(projectId: number): Promise<Project> {
-		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}`, RequestMethod.Get);
+	public async rebaseMergeRequest(projectId: number, mergeRequestIid: number): Promise<void> {
+		await this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/rebase`, RequestMethod.Put);
 	}
 
 	private async sendRequestWithSingleResponse(url: string, method: RequestMethod, body?: object): Promise<any> {
@@ -239,6 +175,10 @@ export class GitlabApi {
 
 		if (response.status === 401) {
 			throw new Error('Unauthorized');
+		}
+
+		if (response.status === 403) {
+			throw new Error('Forbidden');
 		}
 
 		const data = await response.json();

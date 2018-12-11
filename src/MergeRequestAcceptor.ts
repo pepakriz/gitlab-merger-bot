@@ -79,7 +79,6 @@ export const filterBotLabels = (labels: string[]) => {
 
 export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
 	let mergeRequestInfo;
-	let lastCommitOnTarget;
 
 	while (true) {
 		const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
@@ -117,15 +116,20 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			};
 		}
 
-		lastCommitOnTarget = await gitlabApi.getLastCommitOnTarget(mergeRequest.project_id, mergeRequest.target_branch);
-		if (mergeRequestInfo.diff_refs.base_sha !== lastCommitOnTarget.id) {
+		if (mergeRequestInfo.rebase_in_progress) {
+			console.log(`[MR] Still rebasing`);
+			await Promise.all(tasks);
+			continue;
+		}
+
+		if (mergeRequestInfo.diverged_commits_count > 0) {
 			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
 				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
 			});
 			console.log(`[MR] source branch is not up to date, rebasing`);
 			await Promise.all([
 				tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
-				gitlabApi.rebaseMergeRequest(mergeRequest, user),
+				gitlabApi.rebaseMergeRequest(mergeRequest.project_id, mergeRequest.iid),
 			]);
 			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
 				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
