@@ -19,7 +19,6 @@ ENV DATA_DIR=/data
 
 RUN set -ex \
 	&& apk --no-cache --update add \
-		git \
 		ca-certificates \
 		libstdc++ \
 		libgcc \

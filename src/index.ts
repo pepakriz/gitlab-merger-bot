@@ -1,5 +1,4 @@
 import * as env from 'env-var';
-import * as fs from 'fs';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { setBotLabels } from './BotLabelsSetter';
 import { DiscussionNote, GitlabApi, MergeRequest, MergeRequestDiscussion, MergeStatus, User } from './GitlabApi';
@@ -18,13 +17,8 @@ const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
 const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asIntPositive() * 1000;
 const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asIntPositive() * 1000;
 const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE', 'true').asBoolStrict();
-const dataDir = env.get('DATA_DIR', `${__dirname}/../data`).asString();
 
-if (!fs.existsSync(dataDir)) {
-	throw new Error(`Data directory ${dataDir} does not exist`);
-}
-
-const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN, `${dataDir}/repository`);
+const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN);
 const worker = new Worker();
 
 const runMergeRequestCheckerLoop = async (user: User) => {
