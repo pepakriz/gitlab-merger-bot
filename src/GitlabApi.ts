@@ -75,6 +75,7 @@ export interface MergeRequestInfo extends MergeRequest {
 	pipeline: MergeRequestPipeline | null;
 	diverged_commits_count: number;
 	rebase_in_progress: boolean;
+	merge_error: string | null;
 }
 
 export interface DiscussionNote {

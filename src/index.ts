@@ -110,6 +110,17 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 				return;
 			}
 
+			if (result.kind === AcceptMergeRequestResultKind.RebaseFailed) {
+				console.log(`[MR] rebase failed: ${result.mergeRequestInfo.merge_error}, assigning back`);
+
+				await Promise.all([
+					assignToAuthorAndResetLabels(gitlabApi, result.mergeRequestInfo),
+					sendNote(gitlabApi, mergeRequest, `Merge request can't be merged: ${result.mergeRequestInfo.merge_error}`),
+				]);
+
+				return;
+			}
+
 			if (result.kind === AcceptMergeRequestResultKind.ClosedMergeRequest) {
 				console.log(`[MR] Merge request is closed, ending`);
 

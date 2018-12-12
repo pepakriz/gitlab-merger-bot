@@ -16,6 +16,7 @@ export enum AcceptMergeRequestResultKind {
 	ClosedMergeRequest,
 	ReassignedMergeRequest,
 	CanNotBeMerged,
+	RebaseFailed,
 	FailedPipeline,
 	Unauthorized,
 }
@@ -51,10 +52,16 @@ interface UnauthorizedResponse {
 	mergeRequestInfo: MergeRequestInfo;
 }
 
+interface RebaseFailedResponse {
+	kind: AcceptMergeRequestResultKind.RebaseFailed;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
 type AcceptMergeRequestResult = SuccessResponse
 	| ClosedMergeRequestResponse
 	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
+	| RebaseFailedResponse
 	| FailedPipelineResponse
 	| UnauthorizedResponse;
 
@@ -109,9 +116,9 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
 		}
 
-		if (mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged || mergeRequestInfo.work_in_progress) {
+		if (mergeRequestInfo.merge_error !== null) {
 			return {
-				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+				kind: AcceptMergeRequestResultKind.RebaseFailed,
 				mergeRequestInfo,
 			};
 		}
@@ -120,6 +127,13 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			console.log(`[MR] Still rebasing`);
 			await Promise.all(tasks);
 			continue;
+		}
+
+		if (mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged || mergeRequestInfo.work_in_progress) {
+			return {
+				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+				mergeRequestInfo,
+			};
 		}
 
 		if (mergeRequestInfo.diverged_commits_count > 0) {
