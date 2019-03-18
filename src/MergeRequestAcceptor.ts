@@ -18,6 +18,7 @@ export enum AcceptMergeRequestResultKind {
 	CanNotBeMerged,
 	RebaseFailed,
 	FailedPipeline,
+	InvalidPipeline,
 	Unauthorized,
 }
 
@@ -47,6 +48,12 @@ interface FailedPipelineResponse {
 	pipeline: MergeRequestPipeline;
 }
 
+interface InvalidPipelineResponse {
+	kind: AcceptMergeRequestResultKind.InvalidPipeline;
+	mergeRequestInfo: MergeRequestInfo;
+	pipeline: MergeRequestPipeline | null;
+}
+
 interface UnauthorizedResponse {
 	kind: AcceptMergeRequestResultKind.Unauthorized;
 	mergeRequestInfo: MergeRequestInfo;
@@ -63,6 +70,7 @@ type AcceptMergeRequestResult = SuccessResponse
 	| CanNotBeMergedResponse
 	| RebaseFailedResponse
 	| FailedPipelineResponse
+	| InvalidPipelineResponse
 	| UnauthorizedResponse;
 
 interface AcceptMergeRequestOptions {
@@ -152,31 +160,19 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.pipeline === null) {
-			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
-				tasks.push(
-					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
-						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
-					}),
-				);
-			}
-
-			console.log(`[MR] Pipeline doesn't exist, retrying`);
-			await Promise.all(tasks);
-			continue;
+			return {
+				kind: AcceptMergeRequestResultKind.InvalidPipeline,
+				mergeRequestInfo,
+				pipeline: mergeRequestInfo.pipeline,
+			};
 		}
 
 		if (mergeRequestInfo.pipeline.sha !== mergeRequestInfo.sha) {
-			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
-				tasks.push(
-					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
-						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
-					}),
-				);
-			}
-
-			console.log(`[MR] Unexpected pipeline sha, retrying`);
-			await Promise.all(tasks);
-			continue;
+			return {
+				kind: AcceptMergeRequestResultKind.InvalidPipeline,
+				mergeRequestInfo,
+				pipeline: mergeRequestInfo.pipeline,
+			};
 		}
 
 		if (mergeRequestInfo.pipeline.status === PipelineStatus.Running || mergeRequestInfo.pipeline.status === PipelineStatus.Pending) {
