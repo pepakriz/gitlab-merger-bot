@@ -129,6 +129,10 @@ export class GitlabApi {
 		return this.sendRequestWithMultiResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/discussions`, RequestMethod.Get);
 	}
 
+	public async getMergeRequestPipelines(projectId: number, mergeRequestIid: number): Promise<MergeRequestPipeline[]> {
+		return this.sendRequestWithMultiResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/pipelines`, RequestMethod.Get);
+	}
+
 	public async updateMergeRequest(projectId: number, mergeRequestIid: number, data: MergeRequestUpdateData): Promise<MergeRequestInfo> {
 		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}`, RequestMethod.Put, data);
 	}
