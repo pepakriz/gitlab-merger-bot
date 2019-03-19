@@ -23,6 +23,7 @@ export enum MergeState {
 export interface MergeRequest {
 	id: number;
 	iid: number;
+	title: string;
 	author: {
 		id: number;
 	};
