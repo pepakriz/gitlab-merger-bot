@@ -155,19 +155,14 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			}
 
 			if (result.kind === AcceptMergeRequestResultKind.InvalidPipeline) {
-				if (result.pipeline === null) {
-					console.log(`[MR] Pipeline doesn't exist`);
-					await Promise.all([
-						assignToAuthorAndResetLabels(gitlabApi, result.mergeRequestInfo),
-						sendNote(gitlabApi, mergeRequest, `Merge request can't be merged. Pipeline does not exist`),
-					]);
-				} else {
-					console.log(`[MR] Unexpected pipeline sha ${result.pipeline.sha} vs commit ${result.mergeRequestInfo.sha}`);
-					await Promise.all([
-						assignToAuthorAndResetLabels(gitlabApi, result.mergeRequestInfo),
-						sendNote(gitlabApi, mergeRequest, `Merge request can't be merged. The latest pipeline is not executed on the latest commit`),
-					]);
-				}
+				const message = result.pipeline === null
+					? `Merge request can't be merged. Pipeline does not exist`
+					: `Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
+
+				await Promise.all([
+					assignToAuthorAndResetLabels(gitlabApi, result.mergeRequestInfo),
+					sendNote(gitlabApi, mergeRequest, message),
+				]);
 
 				return;
 			}
