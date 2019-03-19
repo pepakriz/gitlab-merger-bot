@@ -212,6 +212,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			should_remove_source_branch: true,
 			merge_when_pipeline_succeeds: true,
 			sha: mergeRequestInfo.diff_refs.head_sha,
+			squash_commit_message: `${mergeRequest.title} (#${mergeRequest.iid})`,
 		});
 
 		if (response.status === 405) { // cannot be merged
