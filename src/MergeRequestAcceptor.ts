@@ -85,6 +85,7 @@ export enum BotLabels {
 }
 
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
+const defaultPipelineValidationRetries = 5;
 
 export const filterBotLabels = (labels: string[]) => {
 	const values = Object.values(BotLabels);
@@ -94,6 +95,7 @@ export const filterBotLabels = (labels: string[]) => {
 
 export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
 	let mergeRequestInfo;
+	let numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 
 	while (true) {
 		const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
@@ -156,18 +158,22 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
 				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
 			});
+			numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 			continue;
 		}
 
-		if (mergeRequestInfo.pipeline === null) {
-			return {
-				kind: AcceptMergeRequestResultKind.InvalidPipeline,
-				mergeRequestInfo,
-				pipeline: mergeRequestInfo.pipeline,
-			};
-		}
+		if (mergeRequestInfo.pipeline === null || mergeRequestInfo.pipeline.sha !== mergeRequestInfo.sha) {
+			const message = mergeRequestInfo.pipeline === null
+				? `[MR] Merge request can't be merged. Pipeline does not exist`
+				: `[MR] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
+			console.log(message);
 
-		if (mergeRequestInfo.pipeline.sha !== mergeRequestInfo.sha) {
+			if (numberOfPipelineValidationRetries > 0) {
+				numberOfPipelineValidationRetries--;
+				await Promise.all(tasks);
+				continue;
+			}
+
 			return {
 				kind: AcceptMergeRequestResultKind.InvalidPipeline,
 				mergeRequestInfo,
@@ -192,6 +198,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		if (mergeRequestInfo.pipeline.status === PipelineStatus.Canceled) {
 			console.log(`[MR] pipeline is canceled calling retry`);
 			await gitlabApi.retryPipeline(mergeRequest.project_id, mergeRequestInfo.pipeline.id);
+			numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 			continue;
 		}
 
