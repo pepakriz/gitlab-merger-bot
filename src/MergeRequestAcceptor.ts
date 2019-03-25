@@ -219,7 +219,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			};
 		}
 
-		if (currentPipeline.status !== PipelineStatus.Success) {
+		if (currentPipeline.status !== PipelineStatus.Success && currentPipeline.status !== PipelineStatus.Skipped) {
 			throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 		}
 
