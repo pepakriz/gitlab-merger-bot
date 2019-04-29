@@ -16,7 +16,6 @@ export enum AcceptMergeRequestResultKind {
 	ClosedMergeRequest,
 	ReassignedMergeRequest,
 	CanNotBeMerged,
-	RebaseFailed,
 	FailedPipeline,
 	InvalidPipeline,
 	Unauthorized,
@@ -59,16 +58,10 @@ interface UnauthorizedResponse {
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-interface RebaseFailedResponse {
-	kind: AcceptMergeRequestResultKind.RebaseFailed;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
 type AcceptMergeRequestResult = SuccessResponse
 	| ClosedMergeRequestResponse
 	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
-	| RebaseFailedResponse
 	| FailedPipelineResponse
 	| InvalidPipelineResponse
 	| UnauthorizedResponse;
@@ -124,13 +117,6 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		if (mergeRequestInfo.state !== MergeState.Opened) {
 			throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
-		}
-
-		if (mergeRequestInfo.merge_error !== null) {
-			return {
-				kind: AcceptMergeRequestResultKind.RebaseFailed,
-				mergeRequestInfo,
-			};
 		}
 
 		if (mergeRequestInfo.rebase_in_progress) {
