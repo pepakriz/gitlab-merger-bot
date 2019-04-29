@@ -102,20 +102,20 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			}
 
 			if (result.kind === AcceptMergeRequestResultKind.CanNotBeMerged) {
-				await Promise.all([
-					tryCancelPipeline(gitlabApi, result.mergeRequestInfo, user),
-					setBotLabels(gitlabApi, result.mergeRequestInfo, []),
-				]);
+				let message = 'Merge request can\'t be merged';
+				const errorMessage = result.mergeRequestInfo.merge_error;
+				if (result.mergeRequestInfo.work_in_progress) {
+					message += `: MR is marked as WIP`;
+				} else if (errorMessage !== null) {
+					message += `: ${errorMessage}`;
+				}
 
-				return;
-			}
-
-			if (result.kind === AcceptMergeRequestResultKind.RebaseFailed) {
-				console.log(`[MR] rebase failed: ${result.mergeRequestInfo.merge_error}, assigning back`);
+				console.log(`[MR] merge failed: ${message}, assigning back`);
 
 				await Promise.all([
 					assignToAuthorAndResetLabels(gitlabApi, result.mergeRequestInfo),
-					sendNote(gitlabApi, mergeRequest, `Merge request can't be merged: ${result.mergeRequestInfo.merge_error}`),
+					tryCancelPipeline(gitlabApi, result.mergeRequestInfo, user),
+					sendNote(gitlabApi, mergeRequest, message),
 				]);
 
 				return;
