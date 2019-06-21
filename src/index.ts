@@ -17,6 +17,7 @@ const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
 const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asIntPositive() * 1000;
 const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asIntPositive() * 1000;
 const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE', 'true').asBoolStrict();
+const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST', 'true').asBoolStrict();
 
 const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN);
 const worker = new Worker();
@@ -25,14 +26,6 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 	console.log('[bot] Checking assigned merge requests');
 	const assignedMergeRequests = await gitlabApi.getAssignedOpenedMergeRequests();
 	const possibleToAcceptMergeRequests = assignedMergeRequests.map(async (mergeRequest: MergeRequest) => {
-		if (REMOVE_BRANCH_AFTER_MERGE && !mergeRequest.force_remove_source_branch) {
-			console.log(`[MR] Marking MR to be squashed and branch removed after merge`);
-			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
-				remove_source_branch: true,
-				squash: true,
-			});
-		}
-
 		if (mergeRequest.merge_status !== MergeStatus.CanBeMerged) {
 			console.log(`[MR] Branch cannot be merged. Probably it needs rebase to target branch, assigning back`);
 
@@ -92,6 +85,8 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 				jobId,
 				() => acceptMergeRequest(gitlabApi, mergeRequest, user, {
 					ciInterval: CI_CHECK_INTERVAL,
+					removeBranchAfterMerge: REMOVE_BRANCH_AFTER_MERGE,
+					squashMergeRequest: SQUASH_MERGE_REQUEST,
 				}),
 			);
 

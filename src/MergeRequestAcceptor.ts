@@ -68,6 +68,8 @@ type AcceptMergeRequestResult = SuccessResponse
 
 interface AcceptMergeRequestOptions {
 	ciInterval: number;
+	removeBranchAfterMerge: boolean;
+	squashMergeRequest: boolean;
 }
 
 export enum BotLabels {
@@ -211,10 +213,12 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		console.log('[MR] Calling merge request');
 		const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequest.project_id}/merge_requests/${mergeRequest.iid}/merge`, RequestMethod.Put, {
-			should_remove_source_branch: true,
+			should_remove_source_branch: options.removeBranchAfterMerge,
 			merge_when_pipeline_succeeds: true,
 			sha: mergeRequestInfo.diff_refs.head_sha,
+			squash: options.squashMergeRequest,
 			squash_commit_message: `${mergeRequest.title} (!${mergeRequest.iid})`,
+			merge_commit_message: `${mergeRequest.title} (!${mergeRequest.iid})`,
 		});
 
 		if (response.status === 405) { // cannot be merged
