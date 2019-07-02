@@ -139,15 +139,17 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
 			});
 			console.log(`[MR] source branch is not up to date, rebasing`);
-			await Promise.all([
-				tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
-				gitlabApi.rebaseMergeRequest(mergeRequest.project_id, mergeRequest.iid),
-			]);
-			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
-				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
-			});
+			await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
+			await gitlabApi.rebaseMergeRequest(mergeRequest.project_id, mergeRequest.iid);
 			numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
+			await Promise.all(tasks);
 			continue;
+		}
+
+		if (containsLabel(mergeRequestInfo.labels, BotLabels.Rebasing)) {
+			await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+				labels: [...filterBotLabels(mergeRequestInfo.labels)].join(','),
+			});
 		}
 
 		let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
@@ -197,6 +199,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				console.log(`[MR] pipeline is canceled calling retry`);
 				await gitlabApi.retryPipeline(mergeRequest.project_id, currentPipeline.id);
 				numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
+				await Promise.all(tasks);
 				continue;
 			}
 
