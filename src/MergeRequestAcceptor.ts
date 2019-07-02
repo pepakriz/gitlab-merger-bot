@@ -152,7 +152,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
 
-		if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
+		if (currentPipeline !== null && currentPipeline.sha !== mergeRequestInfo.sha) {
 			const pipelines = await gitlabApi.getMergeRequestPipelines(mergeRequest.project_id, mergeRequest.iid);
 			const currentPipelineCandidate = pipelines.find((pipeline) => pipeline.sha === mergeRequestInfo.sha);
 
@@ -178,37 +178,39 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			currentPipeline = currentPipelineCandidate;
 		}
 
-		if (currentPipeline.status === PipelineStatus.Running || currentPipeline.status === PipelineStatus.Pending) {
-			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
-				tasks.push(
-					gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
-						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
-					}),
-				);
+		if (currentPipeline !== null) {
+			if (currentPipeline.status === PipelineStatus.Running || currentPipeline.status === PipelineStatus.Pending) {
+				if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
+					tasks.push(
+						gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+							labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
+						}),
+					);
+				}
+
+				console.log(`[MR] Waiting for CI. Current status: ${currentPipeline.status}`);
+				await Promise.all(tasks);
+				continue;
 			}
 
-			console.log(`[MR] Waiting for CI. Current status: ${currentPipeline.status}`);
-			await Promise.all(tasks);
-			continue;
-		}
+			if (currentPipeline.status === PipelineStatus.Canceled) {
+				console.log(`[MR] pipeline is canceled calling retry`);
+				await gitlabApi.retryPipeline(mergeRequest.project_id, currentPipeline.id);
+				numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
+				continue;
+			}
 
-		if (currentPipeline.status === PipelineStatus.Canceled) {
-			console.log(`[MR] pipeline is canceled calling retry`);
-			await gitlabApi.retryPipeline(mergeRequest.project_id, currentPipeline.id);
-			numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
-			continue;
-		}
+			if (currentPipeline.status === PipelineStatus.Failed) {
+				return {
+					kind: AcceptMergeRequestResultKind.FailedPipeline,
+					mergeRequestInfo,
+					pipeline: currentPipeline,
+				};
+			}
 
-		if (currentPipeline.status === PipelineStatus.Failed) {
-			return {
-				kind: AcceptMergeRequestResultKind.FailedPipeline,
-				mergeRequestInfo,
-				pipeline: currentPipeline,
-			};
-		}
-
-		if (currentPipeline.status !== PipelineStatus.Success && currentPipeline.status !== PipelineStatus.Skipped) {
-			throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
+			if (currentPipeline.status !== PipelineStatus.Success && currentPipeline.status !== PipelineStatus.Skipped) {
+				throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
+			}
 		}
 
 		console.log('[MR] Calling merge request');
