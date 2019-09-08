@@ -21,44 +21,49 @@ export enum AcceptMergeRequestResultKind {
 	Unauthorized,
 }
 
-interface SuccessResponse {
+interface Response {
+	mergeRequestInfo: MergeRequestInfo;
+	user: User;
+}
+
+interface SuccessResponse extends Response {
 	kind: AcceptMergeRequestResultKind.SuccessfullyMerged;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-interface ClosedMergeRequestResponse {
+interface ClosedMergeRequestResponse extends Response {
 	kind: AcceptMergeRequestResultKind.ClosedMergeRequest;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-interface ReassignedMergeRequestResponse {
+interface ReassignedMergeRequestResponse extends Response {
 	kind: AcceptMergeRequestResultKind.ReassignedMergeRequest;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-interface CanNotBeMergedResponse {
+interface CanNotBeMergedResponse extends Response {
 	kind: AcceptMergeRequestResultKind.CanNotBeMerged;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-interface FailedPipelineResponse {
+interface FailedPipelineResponse extends Response {
 	kind: AcceptMergeRequestResultKind.FailedPipeline;
 	mergeRequestInfo: MergeRequestInfo;
 	pipeline: MergeRequestPipeline;
 }
 
-interface InvalidPipelineResponse {
+interface InvalidPipelineResponse extends Response {
 	kind: AcceptMergeRequestResultKind.InvalidPipeline;
 	mergeRequestInfo: MergeRequestInfo;
 	pipeline: MergeRequestPipeline | null;
 }
 
-interface UnauthorizedResponse {
+interface UnauthorizedResponse extends Response {
 	kind: AcceptMergeRequestResultKind.Unauthorized;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-type AcceptMergeRequestResult = SuccessResponse
+export type AcceptMergeRequestResult = SuccessResponse
 	| ClosedMergeRequestResponse
 	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
@@ -100,6 +105,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			return {
 				kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
 				mergeRequestInfo,
+				user,
 			};
 		}
 
@@ -107,6 +113,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			return {
 				kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
 				mergeRequestInfo,
+				user,
 			};
 		}
 
@@ -114,6 +121,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			return {
 				kind: AcceptMergeRequestResultKind.ClosedMergeRequest,
 				mergeRequestInfo,
+				user,
 			};
 		}
 
@@ -135,6 +143,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
+				user,
 			};
 		}
 
@@ -177,6 +186,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				return {
 					kind: AcceptMergeRequestResultKind.InvalidPipeline,
 					mergeRequestInfo,
+					user,
 					pipeline: mergeRequestInfo.pipeline,
 				};
 			}
@@ -211,6 +221,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				return {
 					kind: AcceptMergeRequestResultKind.FailedPipeline,
 					mergeRequestInfo,
+					user,
 					pipeline: currentPipeline,
 				};
 			}
@@ -246,6 +257,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			return {
 				kind: AcceptMergeRequestResultKind.Unauthorized,
 				mergeRequestInfo,
+				user,
 			};
 		}
 
