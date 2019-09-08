@@ -68,7 +68,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 	});
 
 	(await Promise.all(possibleToAcceptMergeRequests))
-		.forEach(async (mergeRequest?: MergeRequest) => {
+		.map(async (mergeRequest?: MergeRequest) => {
 			if (mergeRequest === undefined) {
 				return;
 			}
