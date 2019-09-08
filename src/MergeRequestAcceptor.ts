@@ -82,7 +82,7 @@ export enum BotLabels {
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
 const defaultPipelineValidationRetries = 5;
 
-export const filterBotLabels = (labels: string[]) => {
+export const filterBotLabels = (labels: BotLabels[]) => {
 	const values = Object.values(BotLabels);
 
 	return labels.filter((label) => !values.includes(label));
