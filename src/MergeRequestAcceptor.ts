@@ -127,7 +127,11 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			continue;
 		}
 
-		if (mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged || mergeRequestInfo.work_in_progress) {
+		if (
+			mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged
+			|| mergeRequestInfo.merge_error !== null
+			|| mergeRequestInfo.work_in_progress
+		) {
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
