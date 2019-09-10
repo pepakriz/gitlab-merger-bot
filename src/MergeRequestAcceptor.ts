@@ -135,11 +135,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			continue;
 		}
 
-		if (
-			mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged
-			|| mergeRequestInfo.merge_error !== null
-			|| mergeRequestInfo.work_in_progress
-		) {
+		if (mergeRequestInfo.work_in_progress) {
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
@@ -157,6 +153,14 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 			await Promise.all(tasks);
 			continue;
+		}
+
+		if (mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged) {
+			return {
+				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+				mergeRequestInfo,
+				user,
+			};
 		}
 
 		if (containsLabel(mergeRequestInfo.labels, BotLabels.Rebasing)) {
