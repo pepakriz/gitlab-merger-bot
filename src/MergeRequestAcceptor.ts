@@ -85,6 +85,10 @@ export enum BotLabels {
 }
 
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
+const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
+	const userIds = mergeRequest.assignees.map((assignee) => assignee.id);
+	return userIds.includes(user.id);
+};
 const defaultPipelineValidationRetries = 5;
 
 export const filterBotLabels = (labels: BotLabels[]) => {
@@ -101,7 +105,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
 		mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
 
-		if (mergeRequestInfo.assignee !== null && mergeRequestInfo.assignee.id !== user.id) {
+		if (!containsAssignedUser(mergeRequestInfo, user)) {
 			return {
 				kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
 				mergeRequestInfo,
