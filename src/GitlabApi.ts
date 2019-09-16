@@ -21,6 +21,10 @@ export enum MergeState {
 	Merged = 'merged',
 }
 
+interface MergeRequestAssignee {
+	id: number;
+}
+
 export interface MergeRequest {
 	id: number;
 	iid: number;
@@ -28,9 +32,8 @@ export interface MergeRequest {
 	author: {
 		id: number;
 	};
-	assignee: {
-		id: number;
-	} | null;
+	assignee: MergeRequestAssignee | null;
+	assignees: MergeRequestAssignee[];
 	project_id: number;
 	merge_status: MergeStatus;
 	web_url: string;
