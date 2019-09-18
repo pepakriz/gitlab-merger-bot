@@ -90,6 +90,7 @@ const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 	return userIds.includes(user.id);
 };
 const defaultPipelineValidationRetries = 5;
+const defaultRebasingRetries = 1;
 
 export const filterBotLabels = (labels: BotLabels[]) => {
 	const values = Object.values(BotLabels);
@@ -100,6 +101,7 @@ export const filterBotLabels = (labels: BotLabels[]) => {
 export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
 	let mergeRequestInfo: MergeRequestInfo;
 	let numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
+	let numberOfRebasingRetries = defaultRebasingRetries;
 
 	while (true) {
 		const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
@@ -134,7 +136,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.rebase_in_progress) {
-			console.log(`[MR] Still rebasing`);
+			console.log(`[MR][${mergeRequestInfo.iid}] Still rebasing`);
 			await Promise.all(tasks);
 			continue;
 		}
@@ -148,13 +150,23 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.diverged_commits_count > 0) {
+			if (numberOfRebasingRetries <= 0 && mergeRequestInfo.merge_error !== null) {
+				console.log(`[MR][${mergeRequestInfo.iid}] Merge error after rebase`);
+				return {
+					kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+					mergeRequestInfo,
+					user,
+				};
+			}
+
 			await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
 				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
 			});
-			console.log(`[MR] source branch is not up to date, rebasing`);
+			console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
 			await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 			await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
 			numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
+			numberOfRebasingRetries--;
 			await Promise.all(tasks);
 			continue;
 		}
@@ -181,8 +193,8 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 			if (currentPipelineCandidate === undefined) {
 				const message = mergeRequestInfo.pipeline === null
-					? `[MR] Merge request can't be merged. Pipeline does not exist`
-					: `[MR] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
+					? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
+					: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
 				console.log(message);
 
 				if (numberOfPipelineValidationRetries > 0) {
@@ -212,13 +224,13 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 					);
 				}
 
-				console.log(`[MR] Waiting for CI. Current status: ${currentPipeline.status}`);
+				console.log(`[MR][${mergeRequestInfo.iid}] Waiting for CI. Current status: ${currentPipeline.status}`);
 				await Promise.all(tasks);
 				continue;
 			}
 
 			if (currentPipeline.status === PipelineStatus.Canceled) {
-				console.log(`[MR] pipeline is canceled calling retry`);
+				console.log(`[MR][${mergeRequestInfo.iid}] pipeline is canceled calling retry`);
 				await gitlabApi.retryPipeline(mergeRequestInfo.project_id, currentPipeline.id);
 				numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 				await Promise.all(tasks);
@@ -239,7 +251,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			}
 		}
 
-		console.log('[MR] Calling merge request');
+		console.log(`[MR][${mergeRequestInfo.iid}] Calling merge request`);
 		const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`, RequestMethod.Put, {
 			should_remove_source_branch: options.removeBranchAfterMerge,
 			merge_when_pipeline_succeeds: true,
@@ -287,7 +299,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			);
 		}
 
-		console.log(`[MR] Merge request is processing`);
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is processing`);
 		await Promise.all(tasks);
 	}
 };
