@@ -90,6 +90,17 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		return;
 	}
 
+	if (result.kind === AcceptMergeRequestResultKind.WaitingPipeline) {
+		console.log(`[MR] pipeline is waiting for a manual action: ${result.pipeline.status}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			sendNote(gitlabApi, mergeRequestInfo, `Merge request can't be merged. Pipeline is waiting for a manual user action.`),
+		]);
+
+		return;
+	}
+
 	if (result.kind === AcceptMergeRequestResultKind.InvalidPipeline) {
 		const message = result.pipeline === null
 			? `Merge request can't be merged. Pipeline does not exist`

@@ -66,6 +66,7 @@ export enum PipelineStatus {
 	Failed = 'failed',
 	Canceled = 'canceled',
 	Skipped = 'skipped',
+	Created = 'created',
 }
 
 export interface MergeRequestPipeline {

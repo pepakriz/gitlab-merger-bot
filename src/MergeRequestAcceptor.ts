@@ -18,6 +18,7 @@ export enum AcceptMergeRequestResultKind {
 	CanNotBeMerged,
 	FailedPipeline,
 	InvalidPipeline,
+	WaitingPipeline,
 	Unauthorized,
 }
 
@@ -58,6 +59,12 @@ interface InvalidPipelineResponse extends Response {
 	pipeline: MergeRequestPipeline | null;
 }
 
+interface WaitingPipelineResponse extends Response {
+	kind: AcceptMergeRequestResultKind.WaitingPipeline;
+	mergeRequestInfo: MergeRequestInfo;
+	pipeline: MergeRequestPipeline;
+}
+
 interface UnauthorizedResponse extends Response {
 	kind: AcceptMergeRequestResultKind.Unauthorized;
 	mergeRequestInfo: MergeRequestInfo;
@@ -69,6 +76,7 @@ export type AcceptMergeRequestResult = SuccessResponse
 	| CanNotBeMergedResponse
 	| FailedPipelineResponse
 	| InvalidPipelineResponse
+	| WaitingPipelineResponse
 	| UnauthorizedResponse;
 
 interface AcceptMergeRequestOptions {
@@ -240,6 +248,15 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			if (currentPipeline.status === PipelineStatus.Failed) {
 				return {
 					kind: AcceptMergeRequestResultKind.FailedPipeline,
+					mergeRequestInfo,
+					user,
+					pipeline: currentPipeline,
+				};
+			}
+
+			if (currentPipeline.status === PipelineStatus.Created) {
+				return {
+					kind: AcceptMergeRequestResultKind.WaitingPipeline,
 					mergeRequestInfo,
 					user,
 					pipeline: currentPipeline,
