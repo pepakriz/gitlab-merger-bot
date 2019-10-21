@@ -1,6 +1,6 @@
 import {
 	GitlabApi,
-	MergeRequest,
+	MergeRequest, MergeRequestApprovals,
 	MergeRequestInfo, MergeRequestPipeline,
 	MergeState,
 	MergeStatus,
@@ -19,6 +19,7 @@ export enum AcceptMergeRequestResultKind {
 	FailedPipeline,
 	InvalidPipeline,
 	WaitingPipeline,
+	WaitingForApprovals,
 	Unauthorized,
 }
 
@@ -65,6 +66,12 @@ interface WaitingPipelineResponse extends Response {
 	pipeline: MergeRequestPipeline;
 }
 
+interface WaitingForApprovalsResponse extends Response {
+	kind: AcceptMergeRequestResultKind.WaitingForApprovals;
+	mergeRequestInfo: MergeRequestInfo;
+	approvals: MergeRequestApprovals;
+}
+
 interface UnauthorizedResponse extends Response {
 	kind: AcceptMergeRequestResultKind.Unauthorized;
 	mergeRequestInfo: MergeRequestInfo;
@@ -77,6 +84,7 @@ export type AcceptMergeRequestResult = SuccessResponse
 	| FailedPipelineResponse
 	| InvalidPipelineResponse
 	| WaitingPipelineResponse
+	| WaitingForApprovalsResponse
 	| UnauthorizedResponse;
 
 interface AcceptMergeRequestOptions {
@@ -266,6 +274,16 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			if (currentPipeline.status !== PipelineStatus.Success && currentPipeline.status !== PipelineStatus.Skipped) {
 				throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 			}
+		}
+
+		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
+		if (approvals.approvals_left > 0) {
+			return {
+				kind: AcceptMergeRequestResultKind.WaitingForApprovals,
+				mergeRequestInfo,
+				user,
+				approvals,
+			};
 		}
 
 		console.log(`[MR][${mergeRequestInfo.iid}] Calling merge request`);

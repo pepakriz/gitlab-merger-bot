@@ -101,6 +101,17 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		return;
 	}
 
+	if (result.kind === AcceptMergeRequestResultKind.WaitingForApprovals) {
+		console.log(`[MR] Merge request is waiting for approvals, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			sendNote(gitlabApi, mergeRequestInfo, `Merge request is waiting for approvals. Required ${result.approvals.approvals_required}, but ${result.approvals.approvals_left} left.`),
+		]);
+
+		return;
+	}
+
 	if (result.kind === AcceptMergeRequestResultKind.InvalidPipeline) {
 		const message = result.pipeline === null
 			? `Merge request can't be merged. Pipeline does not exist`
