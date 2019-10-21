@@ -151,6 +151,16 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
 		}
 
+		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
+		if (approvals.approvals_left > 0) {
+			return {
+				kind: AcceptMergeRequestResultKind.WaitingForApprovals,
+				mergeRequestInfo,
+				user,
+				approvals,
+			};
+		}
+
 		if (mergeRequestInfo.rebase_in_progress) {
 			console.log(`[MR][${mergeRequestInfo.iid}] Still rebasing`);
 			await Promise.all(tasks);
@@ -274,16 +284,6 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			if (currentPipeline.status !== PipelineStatus.Success && currentPipeline.status !== PipelineStatus.Skipped) {
 				throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 			}
-		}
-
-		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
-		if (approvals.approvals_left > 0) {
-			return {
-				kind: AcceptMergeRequestResultKind.WaitingForApprovals,
-				mergeRequestInfo,
-				user,
-				approvals,
-			};
 		}
 
 		console.log(`[MR][${mergeRequestInfo.iid}] Calling merge request`);
