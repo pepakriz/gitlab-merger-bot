@@ -88,6 +88,11 @@ export interface MergeRequestInfo extends MergeRequest {
 	merge_error: string | null;
 }
 
+export interface MergeRequestApprovals {
+	approvals_required: number;
+	approvals_left: number;
+}
+
 export interface DiscussionNote {
 	resolved: boolean;
 	resolvable: boolean;
@@ -140,6 +145,10 @@ export class GitlabApi {
 
 	public async getMergeRequestPipelines(projectId: number, mergeRequestIid: number): Promise<MergeRequestPipeline[]> {
 		return this.sendRequestWithMultiResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/pipelines`, RequestMethod.Get);
+	}
+
+	public async getMergeRequestApprovals(projectId: number, mergeRequestIid: number): Promise<MergeRequestApprovals> {
+		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/approvals`, RequestMethod.Get);
 	}
 
 	public async updateMergeRequest(projectId: number, mergeRequestIid: number, data: MergeRequestUpdateData): Promise<MergeRequestInfo> {
