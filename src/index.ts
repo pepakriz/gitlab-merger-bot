@@ -163,6 +163,18 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			return;
 		}
 
+		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequest.project_id, mergeRequest.iid);
+		if (approvals.approvals_left > 0) {
+			console.log(`[MR] Merge request is waiting for approvals, assigning back`);
+
+			await Promise.all([
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				sendNote(gitlabApi, mergeRequest, `Merge request is waiting for approvals. Required ${approvals.approvals_required}, but ${approvals.approvals_left} left.`),
+			]);
+
+			return;
+		}
+
 		const mergeRequestDiscussions = await gitlabApi.getMergeRequestDiscussions(mergeRequest.project_id, mergeRequest.iid);
 		const unresolvedDiscussion = mergeRequestDiscussions.find((mergeRequestDiscussion: MergeRequestDiscussion) => {
 			return mergeRequestDiscussion.notes.find((discussionNote: DiscussionNote) => (discussionNote.resolvable && !discussionNote.resolved)) !== undefined;
