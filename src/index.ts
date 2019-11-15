@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import * as env from 'env-var';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { setBotLabels } from './BotLabelsSetter';
@@ -12,10 +13,10 @@ import { tryCancelPipeline } from './PipelineCanceller';
 import { sendNote } from './SendNote';
 import { Worker } from './Worker';
 
-process.on('unhandledRejection', (error) => {
-	console.error('unhandledRejection', error);
-	process.exit(1);
-});
+const SENTRY_DSN = env.get('SENTRY_DSN', '').asString();
+if (SENTRY_DSN !== '') {
+	Sentry.init({ dsn: SENTRY_DSN });
+}
 
 const GITLAB_URL = env.get('GITLAB_URL', 'https://gitlab.com').asUrlString();
 const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
