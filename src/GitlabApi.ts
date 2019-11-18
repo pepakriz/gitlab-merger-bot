@@ -1,6 +1,7 @@
 import fetch, { RequestInit, Response } from 'node-fetch';
 import queryString from 'querystring';
 import { BotLabels } from './MergeRequestAcceptor';
+import { sleep } from './Utils';
 
 export interface User {
 	id: number;
@@ -214,11 +215,11 @@ export class GitlabApi {
 		}
 
 		if (response.status < 200 || response.status >= 300) {
-			throw new Error('Unexpected status code');
+			throw new Error(`Unexpected status code: ${response.status}`);
 		}
 	}
 
-	public sendRawRequest(url: string, method: RequestMethod, body?: RequestBody): Promise<Response> {
+	public async sendRawRequest(url: string, method: RequestMethod, body?: RequestBody): Promise<Response> {
 		const options: RequestInit = {
 			method,
 			headers: {
@@ -235,7 +236,27 @@ export class GitlabApi {
 			}
 		}
 
-		return fetch(`${this.gitlabUrl}${url}`, options);
+		const requestUrl = `${this.gitlabUrl}${url}`;
+
+		const numberOfRequestRetries = 20;
+		let retryCounter = 0;
+		while (true) {
+			const response = await fetch(requestUrl, options);
+
+			if (response.status >= 500) {
+				retryCounter++;
+				if (retryCounter >= numberOfRequestRetries) {
+					throw new Error(`Unexpected status code ${response.status} after ${numberOfRequestRetries} retries`);
+				}
+
+				const sleepTimeout = 10000;
+				console.log(`GitLab request ${method.toUpperCase()} ${requestUrl} responded with a status ${response.status}, I'll try it again after ${sleepTimeout}ms`);
+				await sleep(sleepTimeout);
+				continue;
+			}
+
+			return response;
+		}
 	}
 
 }
