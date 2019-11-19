@@ -222,7 +222,7 @@ export class GitlabApi {
 	public async sendRawRequest(url: string, method: RequestMethod, body?: RequestBody): Promise<Response> {
 		const options: RequestInit = {
 			method,
-			timeout: 10,
+			timeout: 10000,
 			headers: {
 				'Private-Token': this.authToken,
 				'Content-Type': 'application/json',
