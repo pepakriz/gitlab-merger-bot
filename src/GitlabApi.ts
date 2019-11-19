@@ -1,4 +1,4 @@
-import fetch, { RequestInit, Response } from 'node-fetch';
+import fetch, { FetchError, RequestInit, Response } from 'node-fetch';
 import queryString from 'querystring';
 import { BotLabels } from './MergeRequestAcceptor';
 import { sleep } from './Utils';
@@ -222,6 +222,7 @@ export class GitlabApi {
 	public async sendRawRequest(url: string, method: RequestMethod, body?: RequestBody): Promise<Response> {
 		const options: RequestInit = {
 			method,
+			timeout: 10,
 			headers: {
 				'Private-Token': this.authToken,
 				'Content-Type': 'application/json',
@@ -241,21 +242,36 @@ export class GitlabApi {
 		const numberOfRequestRetries = 20;
 		let retryCounter = 0;
 		while (true) {
-			const response = await fetch(requestUrl, options);
+			retryCounter++;
 
-			if (response.status >= 500) {
-				retryCounter++;
-				if (retryCounter >= numberOfRequestRetries) {
-					throw new Error(`Unexpected status code ${response.status} after ${numberOfRequestRetries} retries`);
+			try {
+				const response = await fetch(requestUrl, options);
+				if (response.status >= 500) {
+					if (retryCounter >= numberOfRequestRetries) {
+						throw new Error(`Unexpected status code ${response.status} after ${numberOfRequestRetries} retries`);
+					}
+
+					const sleepTimeout = 10000;
+					console.log(`GitLab request ${method.toUpperCase()} ${requestUrl} responded with a status ${response.status}, I'll try it again after ${sleepTimeout}ms`);
+					await sleep(sleepTimeout);
+					continue;
 				}
 
-				const sleepTimeout = 10000;
-				console.log(`GitLab request ${method.toUpperCase()} ${requestUrl} responded with a status ${response.status}, I'll try it again after ${sleepTimeout}ms`);
-				await sleep(sleepTimeout);
-				continue;
-			}
+				return response;
+			} catch (e) {
+				if (
+					retryCounter < numberOfRequestRetries
+					&& e instanceof FetchError
+					&& ['system', 'request-timeout'].includes(e.type) // `getaddrinfo EAI_AGAIN` errors etc. see https://github.com/bitinn/node-fetch/blob/master/src/index.js#L108
+				) {
+					const sleepTimeout = 10000;
+					console.log(`GitLab request ${method.toUpperCase()} ${requestUrl} failed: ${e.message}, I'll try it again after ${sleepTimeout}ms`);
+					await sleep(sleepTimeout);
+					continue;
+				}
 
-			return response;
+				throw e;
+			}
 		}
 	}
 
