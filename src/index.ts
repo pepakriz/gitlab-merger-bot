@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import * as env from 'env-var';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { setBotLabels } from './BotLabelsSetter';
-import { DiscussionNote, GitlabApi, MergeRequest, MergeRequestDiscussion, MergeStatus, User } from './GitlabApi';
+import { GitlabApi, MergeRequest, MergeStatus, User } from './GitlabApi';
 import {
 	acceptMergeRequest,
 	AcceptMergeRequestResult,
@@ -113,6 +113,17 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		return;
 	}
 
+	if (result.kind === AcceptMergeRequestResultKind.UnresolvedDiscussion) {
+		console.log(`[MR] Merge request has unresolved discussion, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			sendNote(gitlabApi, mergeRequestInfo, `Merge request has unresolved discussion, I can't merge it`),
+		]);
+
+		return;
+	}
+
 	if (result.kind === AcceptMergeRequestResultKind.InvalidPipeline) {
 		const message = result.pipeline === null
 			? `Merge request can't be merged. Pipeline does not exist`
@@ -164,6 +175,17 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			return;
 		}
 
+		if (!mergeRequest.blocking_discussions_resolved) {
+			console.log(`[MR] Merge request has unresolved discussion, assigning back`);
+
+			await Promise.all([
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				sendNote(gitlabApi, mergeRequest, `Merge request has unresolved discussion, I can't merge it`),
+			]);
+
+			return;
+		}
+
 		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequest.project_id, mergeRequest.iid);
 		if (approvals.approvals_left > 0) {
 			console.log(`[MR] Merge request is waiting for approvals, assigning back`);
@@ -171,22 +193,6 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
 				sendNote(gitlabApi, mergeRequest, `Merge request is waiting for approvals. Required ${approvals.approvals_required}, but ${approvals.approvals_left} left.`),
-			]);
-
-			return;
-		}
-
-		const mergeRequestDiscussions = await gitlabApi.getMergeRequestDiscussions(mergeRequest.project_id, mergeRequest.iid);
-		const unresolvedDiscussion = mergeRequestDiscussions.find((mergeRequestDiscussion: MergeRequestDiscussion) => {
-			return mergeRequestDiscussion.notes.find((discussionNote: DiscussionNote) => (discussionNote.resolvable && !discussionNote.resolved)) !== undefined;
-		});
-
-		if (unresolvedDiscussion !== undefined) {
-			console.log(`[MR] Merge request has unresolved discussion, assigning back`);
-
-			await Promise.all([
-				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
-				sendNote(gitlabApi, mergeRequest, `Merge request has unresolved discussion, I can't merge it`),
 			]);
 
 			return;

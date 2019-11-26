@@ -20,6 +20,7 @@ export enum AcceptMergeRequestResultKind {
 	InvalidPipeline,
 	WaitingPipeline,
 	WaitingForApprovals,
+	UnresolvedDiscussion,
 	Unauthorized,
 }
 
@@ -72,6 +73,11 @@ interface WaitingForApprovalsResponse extends Response {
 	approvals: MergeRequestApprovals;
 }
 
+interface UnresolvedDiscussionResponse extends Response {
+	kind: AcceptMergeRequestResultKind.UnresolvedDiscussion;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
 interface UnauthorizedResponse extends Response {
 	kind: AcceptMergeRequestResultKind.Unauthorized;
 	mergeRequestInfo: MergeRequestInfo;
@@ -85,6 +91,7 @@ export type AcceptMergeRequestResult = SuccessResponse
 	| InvalidPipelineResponse
 	| WaitingPipelineResponse
 	| WaitingForApprovalsResponse
+	| UnresolvedDiscussionResponse
 	| UnauthorizedResponse;
 
 interface AcceptMergeRequestOptions {
@@ -149,6 +156,14 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		if (mergeRequestInfo.state !== MergeState.Opened) {
 			throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
+		}
+
+		if (!mergeRequest.blocking_discussions_resolved) {
+			return {
+				kind: AcceptMergeRequestResultKind.UnresolvedDiscussion,
+				mergeRequestInfo,
+				user,
+			};
 		}
 
 		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
@@ -296,15 +311,18 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
 		});
 
-		if (response.status === 405) { // cannot be merged
+		if (response.status === 405) {
+			console.log(`[MR][${mergeRequestInfo.iid}] 405 - cannot be merged`);
 			continue;
 		}
 
-		if (response.status === 406) { // already merged
+		if (response.status === 406) {
+			console.log(`[MR][${mergeRequestInfo.iid}] 406 - already merged`);
 			continue;
 		}
 
-		if (response.status === 409) { // SHA does not match HEAD of source branch
+		if (response.status === 409) {
+			console.log(`[MR][${mergeRequestInfo.iid}] 409 - SHA does not match HEAD of source branch`);
 			continue;
 		}
 

@@ -47,6 +47,7 @@ export interface MergeRequest {
 	force_remove_source_branch: boolean;
 	labels: BotLabels[];
 	squash: boolean;
+	blocking_discussions_resolved: boolean;
 }
 
 interface RequestBody {
@@ -94,15 +95,6 @@ export interface MergeRequestApprovals {
 	approvals_left: number;
 }
 
-export interface DiscussionNote {
-	resolved: boolean;
-	resolvable: boolean;
-}
-
-export interface MergeRequestDiscussion {
-	notes: DiscussionNote[];
-}
-
 interface Pipeline {
 	user: {
 		id: number,
@@ -138,10 +130,6 @@ export class GitlabApi {
 			include_diverged_commits_count: true,
 			include_rebase_in_progress: true,
 		});
-	}
-
-	public async getMergeRequestDiscussions(projectId: number, mergeRequestIid: number): Promise<MergeRequestDiscussion[]> {
-		return this.sendRequestWithMultiResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/discussions`, RequestMethod.Get);
 	}
 
 	public async getMergeRequestPipelines(projectId: number, mergeRequestIid: number): Promise<MergeRequestPipeline[]> {
