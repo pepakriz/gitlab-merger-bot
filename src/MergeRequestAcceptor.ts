@@ -319,7 +319,6 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		console.log(`[MR][${mergeRequestInfo.iid}] Calling merge request`);
 		const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`, RequestMethod.Put, {
 			should_remove_source_branch: options.removeBranchAfterMerge,
-			merge_when_pipeline_succeeds: true,
 			sha: mergeRequestInfo.diff_refs.head_sha,
 			squash: options.squashMergeRequest,
 			squash_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
