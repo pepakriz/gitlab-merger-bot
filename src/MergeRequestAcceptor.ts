@@ -16,6 +16,7 @@ export enum AcceptMergeRequestResultKind {
 	ClosedMergeRequest,
 	ReassignedMergeRequest,
 	CanNotBeMerged,
+	HasConflict,
 	FailedPipeline,
 	InvalidPipeline,
 	WaitingPipeline,
@@ -46,6 +47,11 @@ interface ReassignedMergeRequestResponse extends Response {
 
 interface CanNotBeMergedResponse extends Response {
 	kind: AcceptMergeRequestResultKind.CanNotBeMerged;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
+interface HasConflictResponse extends Response {
+	kind: AcceptMergeRequestResultKind.HasConflict;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
@@ -87,6 +93,7 @@ export type AcceptMergeRequestResult = SuccessResponse
 	| ClosedMergeRequestResponse
 	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
+	| HasConflictResponse
 	| FailedPipelineResponse
 	| InvalidPipelineResponse
 	| WaitingPipelineResponse
@@ -180,6 +187,14 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			console.log(`[MR][${mergeRequestInfo.iid}] Still rebasing`);
 			await Promise.all(tasks);
 			continue;
+		}
+
+		if (mergeRequest.has_conflicts) {
+			return {
+				kind: AcceptMergeRequestResultKind.HasConflict,
+				mergeRequestInfo,
+				user,
+			};
 		}
 
 		if (mergeRequestInfo.work_in_progress) {
