@@ -58,6 +58,18 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		return;
 	}
 
+	if (result.kind === AcceptMergeRequestResultKind.HasConflict) {
+		console.log(`[MR] MR has conflict`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, 'Merge request can\'t be merged: MR has conflict'),
+		]);
+
+		return;
+	}
+
 	if (result.kind === AcceptMergeRequestResultKind.ClosedMergeRequest) {
 		console.log(`[MR] Merge request is closed, ending`);
 
@@ -181,6 +193,17 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
 				sendNote(gitlabApi, mergeRequest, `Merge request has unresolved discussion, I can't merge it`),
+			]);
+
+			return;
+		}
+
+		if (mergeRequest.has_conflicts) {
+			console.log(`[MR] MR has conflict`);
+
+			await Promise.all([
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				sendNote(gitlabApi, mergeRequest, 'Merge request can\'t be merged: MR has conflict'),
 			]);
 
 			return;

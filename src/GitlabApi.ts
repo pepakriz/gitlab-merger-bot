@@ -48,6 +48,7 @@ export interface MergeRequest {
 	labels: BotLabels[];
 	squash: boolean;
 	blocking_discussions_resolved: boolean;
+	has_conflicts: boolean;
 }
 
 interface RequestBody {
