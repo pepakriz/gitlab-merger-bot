@@ -1,5 +1,5 @@
 import fetch, { FetchError, RequestInit, Response } from 'node-fetch';
-import queryString from 'querystring';
+import queryString, { ParsedUrlQueryInput } from 'querystring';
 import { BotLabels } from './MergeRequestAcceptor';
 import { sleep } from './Utils';
 
@@ -51,11 +51,7 @@ export interface MergeRequest {
 	has_conflicts: boolean;
 }
 
-interface RequestBody {
-	[key: string]: {} | null | undefined | number | string;
-}
-
-interface MergeRequestUpdateData extends RequestBody {
+interface MergeRequestUpdateData extends ParsedUrlQueryInput {
 	assignee_id?: number;
 	remove_source_branch?: boolean;
 	squash?: boolean;
@@ -168,7 +164,7 @@ export class GitlabApi {
 		this.validateResponseStatus(response);
 	}
 
-	private async sendRequestWithSingleResponse(url: string, method: RequestMethod, body?: RequestBody): Promise<any> {
+	private async sendRequestWithSingleResponse(url: string, method: RequestMethod, body?: ParsedUrlQueryInput): Promise<any> {
 		const response = await this.sendRawRequest(url, method, body);
 		this.validateResponseStatus(response);
 
@@ -181,7 +177,7 @@ export class GitlabApi {
 		return data;
 	}
 
-	private async sendRequestWithMultiResponse(url: string, method: RequestMethod, body?: RequestBody): Promise<any> {
+	private async sendRequestWithMultiResponse(url: string, method: RequestMethod, body?: ParsedUrlQueryInput): Promise<any> {
 		const response = await this.sendRawRequest(url, method, body);
 		this.validateResponseStatus(response);
 
@@ -208,7 +204,7 @@ export class GitlabApi {
 		}
 	}
 
-	public async sendRawRequest(url: string, method: RequestMethod, body?: RequestBody): Promise<Response> {
+	public async sendRawRequest(url: string, method: RequestMethod, body?: ParsedUrlQueryInput): Promise<Response> {
 		const options: RequestInit = {
 			method,
 			timeout: 10000,
