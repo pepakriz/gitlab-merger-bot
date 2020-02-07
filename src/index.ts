@@ -50,7 +50,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] merge failed: ${message}, assigning back`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, message),
 		]);
@@ -62,7 +62,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] MR has conflict`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, 'Merge request can\'t be merged: MR has conflict'),
 		]);
@@ -96,7 +96,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] pipeline is in failed state: ${result.pipeline.status}, assigning back`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, `Merge request can't be merged due to failing pipeline`),
 		]);
 
@@ -107,7 +107,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] pipeline is waiting for a manual action: ${result.pipeline.status}, assigning back`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, `Merge request can't be merged. Pipeline is waiting for a manual user action.`),
 		]);
 
@@ -118,7 +118,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] Merge request is waiting for approvals, assigning back`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, `Merge request is waiting for approvals. Required ${result.approvals.approvals_required}, but ${result.approvals.approvals_left} left.`),
 		]);
 
@@ -129,7 +129,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] Merge request has unresolved discussion, assigning back`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, `Merge request has unresolved discussion, I can't merge it`),
 		]);
 
@@ -142,7 +142,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 			: `Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, message),
 		]);
 
@@ -153,7 +153,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		console.log(`[MR] You don't have permissions to accept this merge request, assigning back`);
 
 		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo),
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
 			sendNote(gitlabApi, mergeRequestInfo, `Merge request can't be merged due to insufficient authorization`),
 		]);
 
@@ -169,7 +169,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			console.log(`[MR] Branch cannot be merged. Probably it needs rebase to target branch, assigning back`);
 
 			await Promise.all([
-				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
 				sendNote(gitlabApi, mergeRequest, `Merge request can't be merged. Probably it needs rebase to target branch.`),
 			]);
 
@@ -180,7 +180,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			console.log(`[MR] Merge request is WIP, assigning back`);
 
 			await Promise.all([
-				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
 				sendNote(gitlabApi, mergeRequest, `Merge request is marked as WIP, I can't merge it`),
 			]);
 
@@ -191,7 +191,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			console.log(`[MR] Merge request has unresolved discussion, assigning back`);
 
 			await Promise.all([
-				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
 				sendNote(gitlabApi, mergeRequest, `Merge request has unresolved discussion, I can't merge it`),
 			]);
 
@@ -202,7 +202,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			console.log(`[MR] MR has conflict`);
 
 			await Promise.all([
-				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
 				sendNote(gitlabApi, mergeRequest, 'Merge request can\'t be merged: MR has conflict'),
 			]);
 
@@ -214,7 +214,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			console.log(`[MR] Merge request is waiting for approvals, assigning back`);
 
 			await Promise.all([
-				assignToAuthorAndResetLabels(gitlabApi, mergeRequest),
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
 				sendNote(gitlabApi, mergeRequest, `Merge request is waiting for approvals. Required ${approvals.approvals_required}, but ${approvals.approvals_left} left.`),
 			]);
 
