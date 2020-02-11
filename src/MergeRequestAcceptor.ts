@@ -123,10 +123,10 @@ const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 const defaultPipelineValidationRetries = 5;
 const defaultRebasingRetries = 1;
 
-export const filterBotLabels = (labels: string[]): BotLabels[] => {
-	return Object
-		.values(BotLabels)
-		.filter((label) => !labels.includes(label));
+export const filterBotLabels = (labels: string[]): string[] => {
+	const values = Object.values(BotLabels) as string[];
+
+	return labels.filter((label) => !values.includes(label));
 };
 
 export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
