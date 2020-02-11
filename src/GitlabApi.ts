@@ -45,7 +45,7 @@ export interface MergeRequest {
 	work_in_progress: boolean;
 	state: MergeState;
 	force_remove_source_branch: boolean;
-	labels: BotLabels[];
+	labels: string[];
 	squash: boolean;
 	blocking_discussions_resolved: boolean;
 	has_conflicts: boolean;
