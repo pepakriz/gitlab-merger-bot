@@ -105,6 +105,7 @@ interface AcceptMergeRequestOptions {
 	ciInterval: number;
 	removeBranchAfterMerge: boolean;
 	squashMergeRequest: boolean;
+	skipSquashingLabel: string;
 }
 
 export enum BotLabels {
@@ -122,10 +123,10 @@ const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 const defaultPipelineValidationRetries = 5;
 const defaultRebasingRetries = 1;
 
-export const filterBotLabels = (labels: BotLabels[]) => {
-	const values = Object.values(BotLabels);
-
-	return labels.filter((label) => !values.includes(label));
+export const filterBotLabels = (labels: string[]): BotLabels[] => {
+	return Object
+		.values(BotLabels)
+		.filter((label) => !labels.includes(label));
 };
 
 export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
@@ -320,7 +321,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`, RequestMethod.Put, {
 			should_remove_source_branch: options.removeBranchAfterMerge,
 			sha: mergeRequestInfo.diff_refs.head_sha,
-			squash: options.squashMergeRequest,
+			squash: mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest,
 			squash_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
 			merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
 		});

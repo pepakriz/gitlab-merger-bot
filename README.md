@@ -51,3 +51,4 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `MR_CHECK_INTERVAL` | `20` | Time between merge-requests checks (in seconds) |
 | `REMOVE_BRANCH_AFTER_MERGE` | `true` | It'll remove branch after merge |
 | `SQUASH_MERGE_REQUEST` | `true` | It'll squash commits on merge |
+| `SKIP_SQUASHING_LABEL` | `bot:skip-squash` | It'll skip squash when MR contains this label |
