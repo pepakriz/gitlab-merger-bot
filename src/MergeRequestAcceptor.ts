@@ -199,6 +199,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.work_in_progress) {
+			console.log(`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge request is still in progress`);
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
@@ -229,6 +230,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged) {
+			console.log(`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge status is ${mergeRequestInfo.merge_status}`);
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
