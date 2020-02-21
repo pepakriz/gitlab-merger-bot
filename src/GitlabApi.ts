@@ -1,6 +1,5 @@
 import fetch, { FetchError, RequestInit, Response } from 'node-fetch';
 import queryString, { ParsedUrlQueryInput } from 'querystring';
-import { BotLabels } from './MergeRequestAcceptor';
 import { sleep } from './Utils';
 
 export interface User {
@@ -12,6 +11,7 @@ export interface User {
 export enum MergeStatus {
 	CanBeMerged = 'can_be_merged',
 	Unchecked = 'unchecked',
+	Checking = 'checking',
 	Merged = 'merged',
 }
 

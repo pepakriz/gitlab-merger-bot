@@ -190,6 +190,12 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			continue;
 		}
 
+		if (mergeRequestInfo.merge_status === MergeStatus.Checking) {
+			console.log(`[MR][${mergeRequestInfo.iid}] Still checking merge status`);
+			await Promise.all(tasks);
+			continue;
+		}
+
 		if (mergeRequest.has_conflicts) {
 			return {
 				kind: AcceptMergeRequestResultKind.HasConflict,
