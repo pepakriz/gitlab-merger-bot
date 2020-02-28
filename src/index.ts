@@ -163,11 +163,14 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 };
 
 const runMergeRequestCheckerLoop = async (user: User) => {
-	console.log('[bot] Checking assigned merge requests');
+	console.log('[loop] Checking assigned merge requests');
 	const assignedMergeRequests = await gitlabApi.getAssignedOpenedMergeRequests();
 	const possibleToAcceptMergeRequests = assignedMergeRequests.map(async (mergeRequest: MergeRequest) => {
-		if (mergeRequest.merge_status !== MergeStatus.CanBeMerged) {
-			console.log(`[MR] Branch cannot be merged. Probably it needs rebase to target branch, assigning back`);
+		if (
+			mergeRequest.merge_status !== MergeStatus.CanBeMerged
+			&& mergeRequest.merge_status !== MergeStatus.Checking
+		) {
+			console.log(`[loop][MR][${mergeRequest.iid}] Merge request can't be merged. Merge status is ${mergeRequest.merge_status}, assigning back`);
 
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
@@ -178,7 +181,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 		}
 
 		if (mergeRequest.work_in_progress) {
-			console.log(`[MR] Merge request is WIP, assigning back`);
+			console.log(`[loop][MR][${mergeRequest.iid}] Merge request is WIP, assigning back`);
 
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
@@ -189,7 +192,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 		}
 
 		if (!mergeRequest.blocking_discussions_resolved) {
-			console.log(`[MR] Merge request has unresolved discussion, assigning back`);
+			console.log(`[loop][MR][${mergeRequest.iid}] Merge request has unresolved discussion, assigning back`);
 
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
@@ -200,7 +203,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 		}
 
 		if (mergeRequest.has_conflicts) {
-			console.log(`[MR] MR has conflict`);
+			console.log(`[loop][MR][${mergeRequest.iid}] MR has conflict`);
 
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
@@ -212,7 +215,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 
 		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequest.project_id, mergeRequest.iid);
 		if (approvals.approvals_left > 0) {
-			console.log(`[MR] Merge request is waiting for approvals, assigning back`);
+			console.log(`[loop][MR][${mergeRequest.iid}] Merge request is waiting for approvals, assigning back`);
 
 			await Promise.all([
 				assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
