@@ -10,6 +10,7 @@ import {
 	BotLabels,
 } from './MergeRequestAcceptor';
 import { tryCancelPipeline } from './PipelineCanceller';
+import { QueuePosition } from './Queue';
 import { sendNote } from './SendNote';
 import { Worker } from './Worker';
 
@@ -25,6 +26,7 @@ const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asIntPositive() * 1
 const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE', 'true').asBoolStrict();
 const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST', 'true').asBoolStrict();
 const SKIP_SQUASHING_LABEL = env.get('SKIP_SQUASHING_LABEL', 'bot:skip-squash').asString();
+const HI_PRIORITY_LABEL = env.get('HI_PRIORITY_LABEL', 'bot:hi-priority').asString();
 
 const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN);
 const worker = new Worker();
@@ -232,6 +234,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 
 		worker.addJobToQueue(
 			mergeRequest.target_project_id,
+			mergeRequest.labels.includes(HI_PRIORITY_LABEL) ? QueuePosition.START : QueuePosition.END,
 			jobId,
 			() => acceptMergeRequest(gitlabApi, mergeRequest, user, {
 				ciInterval: CI_CHECK_INTERVAL,
