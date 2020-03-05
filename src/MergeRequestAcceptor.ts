@@ -135,7 +135,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 	let numberOfRebasingRetries = defaultRebasingRetries;
 
 	while (true) {
-		const tasks: Array<Promise<any>> = [sleep(options.ciInterval)];
+		const tasks: Promise<any>[] = [sleep(options.ciInterval)];
 		mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
 
 		if (!containsAssignedUser(mergeRequestInfo, user)) {
