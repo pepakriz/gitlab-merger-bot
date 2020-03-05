@@ -1,20 +1,24 @@
-import { Queue, QueuePosition } from './Queue';
+import { JobPriority, Queue } from './Queue';
 
 export class Worker {
 
 	private queues: Queue[] = [];
 
-	public hasJobInQueue(queueId: number, jobId: string): boolean {
+	public hasJobInQueue(
+		queueId: number,
+		jobId: string,
+		jobPriority: JobPriority,
+	): boolean {
 		if (typeof this.queues[queueId] === 'undefined') {
 			return false;
 		}
 
-		return this.queues[queueId].hasJob(jobId);
+		return this.queues[queueId].hasJob(jobId, jobPriority);
 	}
 
 	public addJobToQueue<T extends Promise<any>>(
 		queueId: number,
-		queuePosition: QueuePosition,
+		queuePosition: JobPriority,
 		jobId: string,
 		job: () => T,
 	): T {

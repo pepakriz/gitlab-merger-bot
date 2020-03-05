@@ -10,7 +10,7 @@ import {
 	BotLabels,
 } from './MergeRequestAcceptor';
 import { tryCancelPipeline } from './PipelineCanceller';
-import { QueuePosition } from './Queue';
+import { JobPriority } from './Queue';
 import { sendNote } from './SendNote';
 import { Worker } from './Worker';
 
@@ -227,14 +227,15 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			return;
 		}
 
+		const jobPriority = mergeRequest.labels.includes(HI_PRIORITY_LABEL) ? JobPriority.HI : JobPriority.NORMAL;
 		const jobId = `accept-merge-${mergeRequest.id}`;
-		if (worker.hasJobInQueue(mergeRequest.target_project_id, jobId)) {
+		if (worker.hasJobInQueue(mergeRequest.target_project_id, jobId, jobPriority)) {
 			return;
 		}
 
 		worker.addJobToQueue(
 			mergeRequest.target_project_id,
-			mergeRequest.labels.includes(HI_PRIORITY_LABEL) ? QueuePosition.START : QueuePosition.END,
+			jobPriority,
 			jobId,
 			() => acceptMergeRequest(gitlabApi, mergeRequest, user, {
 				ciInterval: CI_CHECK_INTERVAL,
