@@ -1,23 +1,45 @@
-export enum QueuePosition {
-	START,
-	END,
+export enum JobPriority {
+	HI,
+	NORMAL,
+}
+
+interface Jobs {
+	[key: string]: () => any;
 }
 
 export class Queue {
 
 	private promise?: Promise<void>;
-	private jobs: { [key: string]: () => any } = {};
+	private jobs: { [key in JobPriority]: Jobs } = {
+		[JobPriority.HI]: {},
+		[JobPriority.NORMAL]: {},
+	};
 
-	public hasJob(jobId: string): boolean {
-		return typeof this.jobs[jobId] !== 'undefined';
+	public hasJob(
+		jobId: string,
+		jobPriority: JobPriority,
+	): boolean {
+		const currentJobPriority = this.getPriorityByJobId(jobId);
+		if (currentJobPriority === null) {
+			return false;
+		}
+
+		if (currentJobPriority === JobPriority.NORMAL && jobPriority === JobPriority.HI) {
+			console.log(`[job][${jobId}] Job has been moved to the prioritized queue`);
+			this.jobs[jobPriority][jobId] = this.jobs[currentJobPriority][jobId];
+			delete this.jobs[currentJobPriority][jobId];
+		}
+
+		return true;
 	}
 
 	public runJob<T extends Promise<any>>(
 		jobId: string,
 		job: () => T,
-		position: QueuePosition,
+		jobPriority: JobPriority,
 	): T {
-		if (typeof this.jobs[jobId] !== 'undefined') {
+		const currentJobPriority = this.getPriorityByJobId(jobId);
+		if (currentJobPriority !== null) {
 			throw new Error(`JobId ${jobId} is already in queue`);
 		}
 
@@ -28,27 +50,36 @@ export class Queue {
 				} catch (e) {
 					reject(e);
 				}
-				delete this.jobs[jobId];
+
+				const runtimeJobPriority = this.getPriorityByJobId(jobId);
+				if (runtimeJobPriority === null) {
+					throw new Error(`JobId ${jobId} not found`);
+				}
+
+				delete this.jobs[runtimeJobPriority][jobId];
 			};
 
-			if (position === QueuePosition.END) {
-				this.jobs[jobId] = fn;
-			} else {
-				this.jobs = {[jobId]: fn, ...this.jobs};
-			}
+			this.jobs[jobPriority][jobId] = fn;
 		});
 
 		if (this.promise === undefined) {
 			this.promise = new Promise(async (resolve, reject) => {
 				while (true) {
-					const jobIds = Object.keys(this.jobs);
+					let jobIds = Object.keys(this.jobs[JobPriority.HI]);
+					let priority = JobPriority.HI;
+
 					if (jobIds.length === 0) {
-						this.promise = undefined;
-						resolve();
-						return;
+						jobIds = Object.keys(this.jobs[JobPriority.NORMAL]);
+						if (jobIds.length === 0) {
+							this.promise = undefined;
+							resolve();
+							return;
+						}
+
+						priority = JobPriority.NORMAL;
 					}
 
-					const currentJob = await this.jobs[jobIds[0]];
+					const currentJob = await this.jobs[priority][jobIds[0]];
 
 					try {
 						await currentJob();
@@ -60,6 +91,18 @@ export class Queue {
 		}
 
 		return jobPromise as T;
+	}
+
+	private getPriorityByJobId(jobId: string): JobPriority | null {
+		if (typeof this.jobs[JobPriority.HI][jobId] !== 'undefined') {
+			return JobPriority.HI;
+		}
+
+		if (typeof this.jobs[JobPriority.NORMAL][jobId] !== 'undefined') {
+			return JobPriority.NORMAL;
+		}
+
+		return null;
 	}
 
 }
