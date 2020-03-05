@@ -14,19 +14,19 @@ import { JobPriority } from './Queue';
 import { sendNote } from './SendNote';
 import { Worker } from './Worker';
 
-const SENTRY_DSN = env.get('SENTRY_DSN', '').asString();
+const SENTRY_DSN = env.get('SENTRY_DSN').default('').asString();
 if (SENTRY_DSN !== '') {
 	Sentry.init({ dsn: SENTRY_DSN });
 }
 
-const GITLAB_URL = env.get('GITLAB_URL', 'https://gitlab.com').asUrlString();
+const GITLAB_URL = env.get('GITLAB_URL').default('https://gitlab.com').asUrlString();
 const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
-const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL', '10').asIntPositive() * 1000;
-const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL', '20').asIntPositive() * 1000;
-const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE', 'true').asBoolStrict();
-const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST', 'true').asBoolStrict();
-const SKIP_SQUASHING_LABEL = env.get('SKIP_SQUASHING_LABEL', 'bot:skip-squash').asString();
-const HI_PRIORITY_LABEL = env.get('HI_PRIORITY_LABEL', 'bot:hi-priority').asString();
+const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL').default('10').asIntPositive() * 1000;
+const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL').default('20').asIntPositive() * 1000;
+const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE').default('true').asBoolStrict();
+const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST').default('true').asBoolStrict();
+const SKIP_SQUASHING_LABEL = env.get('SKIP_SQUASHING_LABEL').default('bot:skip-squash').asString();
+const HI_PRIORITY_LABEL = env.get('HI_PRIORITY_LABEL').default('bot:hi-priority').asString();
 
 const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN);
 const worker = new Worker();
