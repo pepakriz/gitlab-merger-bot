@@ -1,4 +1,4 @@
-import { Queue } from './Queue';
+import { Queue, QueuePosition } from './Queue';
 
 export class Worker {
 
@@ -12,12 +12,17 @@ export class Worker {
 		return this.queues[queueId].hasJob(jobId);
 	}
 
-	public addJobToQueue<T extends Promise<any>>(queueId: number, jobId: string, job: () => T): T {
+	public addJobToQueue<T extends Promise<any>>(
+		queueId: number,
+		queuePosition: QueuePosition,
+		jobId: string,
+		job: () => T,
+	): T {
 		if (typeof this.queues[queueId] === 'undefined') {
 			this.queues[queueId] = new Queue();
 		}
 
-		return this.queues[queueId].runJob(jobId, job);
+		return this.queues[queueId].runJob(jobId, job, queuePosition);
 	}
 
 }

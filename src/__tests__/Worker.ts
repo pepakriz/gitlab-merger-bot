@@ -1,3 +1,4 @@
+import { QueuePosition } from '../Queue';
 import { Worker } from '../Worker';
 
 it('runs two jobs', async () => {
@@ -9,12 +10,12 @@ it('runs two jobs', async () => {
 	expect(worker.hasJobInQueue(1, 'fooJob')).toBe(false);
 	expect(worker.hasJobInQueue(2, 'fooJob')).toBe(false);
 
-	tasks.push(worker.addJobToQueue(1, 'fooJob', job1));
+	tasks.push(worker.addJobToQueue(1, QueuePosition.END, 'fooJob', job1));
 
 	expect(worker.hasJobInQueue(1, 'fooJob')).toBe(true);
 	expect(worker.hasJobInQueue(2, 'fooJob')).toBe(false);
 
-	tasks.push(worker.addJobToQueue(2, 'fooJob', job1));
+	tasks.push(worker.addJobToQueue(2, QueuePosition.END, 'fooJob', job1));
 
 	expect(worker.hasJobInQueue(1, 'fooJob')).toBe(true);
 	expect(worker.hasJobInQueue(2, 'fooJob')).toBe(true);

@@ -52,3 +52,4 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `REMOVE_BRANCH_AFTER_MERGE` | `true` | It'll remove branch after merge |
 | `SQUASH_MERGE_REQUEST` | `true` | It'll squash commits on merge |
 | `SKIP_SQUASHING_LABEL` | `bot:skip-squash` | It'll skip squash when MR contains this label |
+| `HI_PRIORITY_LABEL` | `bot:hi-priority` | It'll put MR with this label to the beginning of the queue |
