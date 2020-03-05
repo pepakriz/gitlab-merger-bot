@@ -1,4 +1,4 @@
-FROM node:12.13.0-alpine AS build
+FROM node:12.16.1-alpine AS build
 WORKDIR /app
 
 COPY ./package.json ./yarn.lock ./
@@ -12,7 +12,7 @@ RUN set -ex \
 	&& yarn run build \
 	&& yarn run build-bin
 
-FROM alpine:3.8
+FROM alpine:3.11
 CMD ["/bin/gitlab-merger-bot"]
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
