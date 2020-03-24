@@ -23,6 +23,22 @@
 
 ## Usage
 
+#### Running in kubernetes (with HELM)
+
+To add the Helm Chart for your local client, run helm repo add:
+
+```bash
+helm repo add gitlab-merger-bot https://pepakriz.github.io/gitlab-merger-bot
+```
+
+And install it:
+
+```bash
+helm install --name gitlab-merger-bot gitlab-merger-bot \
+#   --set settings.gitlabUrl="https://gitlab.mycompany.com" \
+    --set settings.authToken="<token>"
+```
+
 #### Running in docker
 
 ```bash
