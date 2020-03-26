@@ -252,7 +252,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
 
-		if (currentPipeline !== null && currentPipeline.sha !== mergeRequestInfo.sha) {
+		if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
 			const pipelines = await gitlabApi.getMergeRequestPipelines(mergeRequestInfo.project_id, mergeRequestInfo.iid);
 			const currentPipelineCandidate = pipelines.find((pipeline) => pipeline.sha === mergeRequestInfo.sha);
 
