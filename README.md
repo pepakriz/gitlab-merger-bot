@@ -35,8 +35,8 @@ And install it:
 
 ```bash
 helm install --name gitlab-merger-bot gitlab-merger-bot \
-#   --set settings.gitlabUrl="https://gitlab.mycompany.com" \
-    --set settings.authToken="<token>"
+#	--set settings.gitlabUrl="https://gitlab.mycompany.com" \
+	--set settings.authToken="<token>"
 ```
 
 #### Running in docker
