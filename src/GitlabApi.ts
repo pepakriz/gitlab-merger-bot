@@ -66,6 +66,10 @@ export enum PipelineStatus {
 	Canceled = 'canceled',
 	Skipped = 'skipped',
 	Created = 'created',
+	WaitingForResource = 'waiting_for_resource',
+	Preparing = 'preparing',
+	Manual = 'manual',
+	Scheduled = 'scheduled',
 }
 
 export interface MergeRequestPipeline {
