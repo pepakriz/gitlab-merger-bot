@@ -4,7 +4,7 @@
 
 ## What does it do?
 
-The goal is to have green master after every merge. To achieve this you must rebase every single merge request just before the merge and wait for pipeline status. It takes a lot of time of manual maintenance. So let's automate it with GitLab MergerBot.
+The goal is to have green master after every merge. To achieve this you have to rebase every single merge request just before the merge and wait for the pipeline status. It takes a lot of time of manual maintenance, especially when you have to process a big chunk of merge requests (common situation for large projects, monorepos etc.). So let's automate it with GitLab MergerBot.
 
 1) When your merge request is ready to merge, assign it to the bot.
 2) The bot will add your request to its own serial (FIFO) queue. (single queue for every repository)
@@ -34,6 +34,7 @@ Reasons can be for example:
 2) In `General Settings - Merge Request` section:
 	* set `Merge method` to `Fast-forward merge`
 	* check `Only allow merge requests to be merged if the pipeline succeeds`
+	* check (optionally) `All discussions must be resolved`
 
 
 ## Usage
