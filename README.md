@@ -6,7 +6,7 @@
 
 The goal is to have green master after every merge. To achieve this you must rebase every single merge request just before the merge and wait for pipeline status. It takes a lot of time of manual maintenance. So let's automate it with GitLab MergerBot.
 
-1) When you merge request is ready to merge, assign it to the bot.
+1) When your merge request is ready to merge, assign it to the bot.
 2) The bot will add your request to its own serial (FIFO) queue. (single queue for every repository)
 3) When your request is on the turn, the bot will rebase the MR and start waiting for the pipeline.
 4) When the bot detects some problems with the merge request it'll reassign the merge request back to the author.<br />
