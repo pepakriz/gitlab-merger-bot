@@ -2,6 +2,21 @@
 
 [![Build Status](https://travis-ci.org/pepakriz/gitlab-merger-bot.svg)](https://travis-ci.org/pepakriz/gitlab-merger-bot)
 
+## What does it do?
+
+The goal is to have green master after every merge. To achieve this you must rebase every single merge request just before the merge and wait for pipeline status. It takes a lot of time of manual maintenance. So let's automate it with GitLab MergerBot.
+
+1) When you merge request is ready to merge, assign it to the bot.
+2) The bot will add your request to its own serial (FIFO) queue. (single queue for every repository)
+3) When your request is on the turn, the bot will rebase the MR and start waiting for the pipeline.
+4) When the bot detects some problems with the merge request it'll reassign the merge request back to the author.<br />
+Reasons can be for example:
+	- Failing pipeline or pipeline awaiting for a manual action
+	- The merge request has unresolved discussions
+	- The merge request can't be rebased due to conflict
+
+![Assign](https://i.imgur.com/B3Xnpgi.png)
+![Merged](https://i.imgur.com/N0WhuOU.png)
 
 ## Pre-Installation requirements
 
@@ -11,7 +26,7 @@
 2) Sign-in to GitLab as bot-user and go to [https://gitlab.com/profile/personal_access_tokens](https://gitlab.com/profile/personal_access_tokens)
 3) Add new personal access token with `api` scope
 
-> We strongly recommend using a separate account for bot-user. Don't reuse existing account which can leave the project in future.
+> We strongly recommend using a separate account for bot-user. Don't reuse existing account which can leave the project in the future.
 
 #### Setup GitLab repository
 
