@@ -115,6 +115,14 @@ export enum BotLabels {
 	WaitingForPipeline = 'waiting-for-pipeline',
 }
 
+const startingOrInProgressPipelineStatuses = [
+	PipelineStatus.Running,
+	PipelineStatus.Pending,
+	PipelineStatus.Created,
+	PipelineStatus.WaitingForResource,
+	PipelineStatus.Preparing,
+];
+
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
 const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 	const userIds = mergeRequest.assignees.map((assignee) => assignee.id);
@@ -280,7 +288,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 		}
 
 		if (currentPipeline !== null) {
-			if (currentPipeline.status === PipelineStatus.Running || currentPipeline.status === PipelineStatus.Pending) {
+			if (startingOrInProgressPipelineStatuses.includes(currentPipeline.status)) {
 				if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
 					tasks.push(
 						gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
@@ -311,7 +319,7 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				};
 			}
 
-			if (currentPipeline.status === PipelineStatus.Created) {
+			if (currentPipeline.status === PipelineStatus.Manual) {
 				return {
 					kind: AcceptMergeRequestResultKind.WaitingPipeline,
 					mergeRequestInfo,
