@@ -122,7 +122,6 @@ export enum BotLabels {
 const startingOrInProgressPipelineStatuses = [
 	PipelineStatus.Running,
 	PipelineStatus.Pending,
-	PipelineStatus.Created,
 	PipelineStatus.WaitingForResource,
 	PipelineStatus.Preparing,
 ];
@@ -344,7 +343,11 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				};
 			}
 
-			if (currentPipeline.status !== PipelineStatus.Success && currentPipeline.status !== PipelineStatus.Skipped) {
+			if (
+				currentPipeline.status !== PipelineStatus.Success
+				&& currentPipeline.status !== PipelineStatus.Skipped
+				&& currentPipeline.status !== PipelineStatus.Created
+			) {
 				throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 			}
 		}
