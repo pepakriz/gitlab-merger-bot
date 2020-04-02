@@ -265,29 +265,31 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 
 		if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
 			const pipelines = await gitlabApi.getMergeRequestPipelines(mergeRequestInfo.project_id, mergeRequestInfo.iid);
-			const currentPipelineCandidate = pipelines.find((pipeline) => pipeline.sha === mergeRequestInfo.sha);
+			if (pipelines.length > 0) {
+				const currentPipelineCandidate = pipelines.find((pipeline) => pipeline.sha === mergeRequestInfo.sha);
 
-			if (currentPipelineCandidate === undefined) {
-				const message = mergeRequestInfo.pipeline === null
-					? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
-					: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
-				console.log(message);
+				if (currentPipelineCandidate === undefined) {
+					const message = mergeRequestInfo.pipeline === null
+						? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
+						: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
+					console.log(message);
 
-				if (numberOfPipelineValidationRetries > 0) {
-					numberOfPipelineValidationRetries--;
-					await Promise.all(tasks);
-					continue;
+					if (numberOfPipelineValidationRetries > 0) {
+						numberOfPipelineValidationRetries--;
+						await Promise.all(tasks);
+						continue;
+					}
+
+					return {
+						kind: AcceptMergeRequestResultKind.InvalidPipeline,
+						mergeRequestInfo,
+						user,
+						pipeline: mergeRequestInfo.pipeline,
+					};
 				}
 
-				return {
-					kind: AcceptMergeRequestResultKind.InvalidPipeline,
-					mergeRequestInfo,
-					user,
-					pipeline: mergeRequestInfo.pipeline,
-				};
+				currentPipeline = currentPipelineCandidate;
 			}
-
-			currentPipeline = currentPipelineCandidate;
 		}
 
 		if (currentPipeline !== null) {
