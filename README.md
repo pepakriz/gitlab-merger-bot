@@ -93,3 +93,4 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `AUTORUN_MANUAL_BLOCKING_JOBS` | `true` | It'll autorun manual blocking jobs before merge |
 | `SKIP_SQUASHING_LABEL` | `bot:skip-squash` | It'll skip squash when MR contains this label |
 | `HI_PRIORITY_LABEL` | `bot:hi-priority` | It'll put MR with this label to the beginning of the queue |
+| `SENTRY_DSN` | `` | It'll enable Sentry monitoring |
