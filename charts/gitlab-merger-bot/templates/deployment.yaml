@@ -45,6 +45,8 @@ spec:
           value: "{{ .Values.settings.ciCheckInterval }}"
         - name: MR_CHECK_INTERVAL
           value: "{{ .Values.settings.mrCheckInterval }}"
+        - name: AUTORUN_MANUAL_BLOCKING_JOBS
+          value: "{{ .Values.settings.autorunManualBlockingJobs }}"
         - name: SENTRY_DSN
           value: "{{ .Values.settings.sentryDsn }}"
         - name: SKIP_SQUASHING_LABEL

@@ -25,6 +25,7 @@ const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL').default('10').asIntPositi
 const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL').default('20').asIntPositive() * 1000;
 const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE').default('true').asBoolStrict();
 const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST').default('true').asBoolStrict();
+const AUTORUN_MANUAL_BLOCKING_JOBS = env.get('AUTORUN_MANUAL_BLOCKING_JOBS').default('true').asBoolStrict();
 const SKIP_SQUASHING_LABEL = env.get('SKIP_SQUASHING_LABEL').default('bot:skip-squash').asString();
 const HI_PRIORITY_LABEL = env.get('HI_PRIORITY_LABEL').default('bot:hi-priority').asString();
 
@@ -242,6 +243,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 				removeBranchAfterMerge: REMOVE_BRANCH_AFTER_MERGE,
 				squashMergeRequest: SQUASH_MERGE_REQUEST,
 				skipSquashingLabel: SKIP_SQUASHING_LABEL,
+				autorunManualBlockingJobs: AUTORUN_MANUAL_BLOCKING_JOBS,
 			}),
 		).then(resolveMergeRequestResult);
 
