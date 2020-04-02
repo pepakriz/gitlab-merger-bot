@@ -45,6 +45,10 @@ spec:
           value: "{{ .Values.settings.ciCheckInterval }}"
         - name: MR_CHECK_INTERVAL
           value: "{{ .Values.settings.mrCheckInterval }}"
+        - name: REMOVE_BRANCH_AFTER_MERGE
+          value: "{{ .Values.settings.removeBranchAfterMerge }}"
+        - name: SQUASH_MERGE_REQUEST
+          value: "{{ .Values.settings.squashMergeRequest }}"
         - name: AUTORUN_MANUAL_BLOCKING_JOBS
           value: "{{ .Values.settings.autorunManualBlockingJobs }}"
         - name: SENTRY_DSN

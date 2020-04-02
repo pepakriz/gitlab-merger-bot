@@ -26,6 +26,8 @@ settings:
   sentryDsn: ""
   ciCheckInterval: 10
   mrCheckInterval: 20
+  removeBranchAfterMerge: true
+  squashMergeRequest: true
   autorunManualBlockingJobs: true
   skipSquashingLabel: ""
   hiPriorityLabel: ""
