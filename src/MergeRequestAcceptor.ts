@@ -1,9 +1,12 @@
 import {
 	GitlabApi,
-	MergeRequest, MergeRequestApprovals,
-	MergeRequestInfo, MergeRequestPipeline,
+	MergeRequest,
+	MergeRequestApprovals,
+	MergeRequestInfo,
+	MergeRequestPipeline,
 	MergeState,
 	MergeStatus,
+	PipelineJobStatus,
 	PipelineStatus,
 	RequestMethod,
 	User,
@@ -106,6 +109,7 @@ interface AcceptMergeRequestOptions {
 	removeBranchAfterMerge: boolean;
 	squashMergeRequest: boolean;
 	skipSquashingLabel: string;
+	autorunManualBlockingJobs: boolean;
 }
 
 export enum BotLabels {
@@ -317,6 +321,18 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 					user,
 					pipeline: currentPipeline,
 				};
+			}
+
+			if (options.autorunManualBlockingJobs && currentPipeline.status === PipelineStatus.Manual) {
+				const jobs = await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id);
+				const jobsToRun = jobs.filter((job) => job.status === PipelineJobStatus.Manual && !job.allow_failure);
+
+				if (jobsToRun.length > 0) {
+					console.log(`[MR][${mergeRequestInfo.iid}] there are some blocking manual jobs. triggering`);
+					await Promise.all(jobsToRun.map((job) => gitlabApi.runJob(mergeRequestInfo.project_id, job.id)));
+					await Promise.all(tasks);
+					continue;
+				}
 			}
 
 			if (currentPipeline.status === PipelineStatus.Manual) {

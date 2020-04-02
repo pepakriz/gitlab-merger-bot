@@ -78,6 +78,21 @@ export interface MergeRequestPipeline {
 	status: PipelineStatus;
 }
 
+export enum PipelineJobStatus {
+	Manual = 'manual',
+	Failed = 'failed',
+	Canceled = 'canceled',
+	Pending = 'pending',
+	Started = 'started',
+	Running = 'running',
+}
+
+export interface PipelineJob {
+	id: number;
+	allow_failure: boolean;
+	status: PipelineJobStatus;
+}
+
 export interface MergeRequestInfo extends MergeRequest {
 	sha: string;
 	diff_refs: {
@@ -137,6 +152,10 @@ export class GitlabApi {
 		return this.sendRequestWithMultiResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/pipelines`, RequestMethod.Get);
 	}
 
+	public async getPipelineJobs(projectId: number, pipelineId: number): Promise<PipelineJob[]> {
+		return this.sendRequestWithMultiResponse(`/api/v4/projects/${projectId}/pipelines/${pipelineId}/jobs`, RequestMethod.Get);
+	}
+
 	public async getMergeRequestApprovals(projectId: number, mergeRequestIid: number): Promise<MergeRequestApprovals> {
 		return this.sendRequestWithSingleResponse(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/approvals`, RequestMethod.Get);
 	}
@@ -165,6 +184,11 @@ export class GitlabApi {
 
 	public async rebaseMergeRequest(projectId: number, mergeRequestIid: number): Promise<void> {
 		const response = await this.sendRawRequest(`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/rebase`, RequestMethod.Put);
+		this.validateResponseStatus(response);
+	}
+
+	public async runJob(projectId: number, jobId: number): Promise<void> {
+		const response = await this.sendRawRequest(`/api/v4/projects/${projectId}/jobs/${jobId}/play`, RequestMethod.Post);
 		this.validateResponseStatus(response);
 	}
 
