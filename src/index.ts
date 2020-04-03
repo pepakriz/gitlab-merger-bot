@@ -44,12 +44,23 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 		return;
 	}
 
+	if (result.kind === AcceptMergeRequestResultKind.WorkInProgress) {
+		const message = 'Merge request can\'t be merged: MR is marked as WIP';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return;
+	}
+
 	if (result.kind === AcceptMergeRequestResultKind.CanNotBeMerged) {
 		let message = 'Merge request can\'t be merged';
 		const errorMessage = mergeRequestInfo.merge_error;
-		if (mergeRequestInfo.work_in_progress) {
-			message += `: MR is marked as WIP`;
-		} else if (errorMessage !== null) {
+		if (errorMessage !== null) {
 			message += `: ${errorMessage}`;
 		}
 
