@@ -21,12 +21,16 @@ export enum AcceptMergeRequestResultKind {
 	CanNotBeMerged,
 	HasConflict,
 	FailedPipeline,
+	PipelineInProgress,
 	InvalidPipeline,
 	WaitingPipeline,
 	WaitingForApprovals,
 	UnresolvedDiscussion,
 	Unauthorized,
 	InvalidSha,
+	RebaseInProgress,
+	CheckingMergeStatus,
+	WorkInProgress,
 }
 
 interface Response {
@@ -98,6 +102,27 @@ interface InvalidShaResponse extends Response {
 	mergeRequestInfo: MergeRequestInfo;
 }
 
+interface RebaseInProgressResponse extends Response {
+	kind: AcceptMergeRequestResultKind.RebaseInProgress;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
+interface CheckingMergeStatusResponse extends Response {
+	kind: AcceptMergeRequestResultKind.CheckingMergeStatus;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
+interface WorkInProgressResponse extends Response {
+	kind: AcceptMergeRequestResultKind.WorkInProgress;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
+interface PipelineInProgressResponse extends Response {
+	kind: AcceptMergeRequestResultKind.PipelineInProgress;
+	mergeRequestInfo: MergeRequestInfo;
+	pipeline: MergeRequestPipeline;
+}
+
 export type AcceptMergeRequestResult = SuccessResponse
 	| ClosedMergeRequestResponse
 	| ReassignedMergeRequestResponse
@@ -108,11 +133,20 @@ export type AcceptMergeRequestResult = SuccessResponse
 	| WaitingPipelineResponse
 	| WaitingForApprovalsResponse
 	| UnresolvedDiscussionResponse
+	| WorkInProgressResponse
 	| UnauthorizedResponse;
 
 export type MergeMergeRequestResult = SuccessResponse
+	| ClosedMergeRequestResponse
+	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
+	| HasConflictResponse
 	| InvalidShaResponse
+	| UnresolvedDiscussionResponse
+	| RebaseInProgressResponse
+	| CheckingMergeStatusResponse
+	| WorkInProgressResponse
+	| PipelineInProgressResponse
 	| UnauthorizedResponse;
 
 interface AcceptMergeRequestOptions {
@@ -159,8 +193,94 @@ export const acceptMergeRequest = async (
 ): Promise<MergeMergeRequestResult> => {
 	console.log(`[MR][${mergeRequest.iid}] Calling merge request`);
 	const mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
-	const useSquash = mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest;
 
+	if (mergeRequestInfo.state === MergeState.Merged) {
+		return {
+			kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequestInfo.state === MergeState.Closed) {
+		return {
+			kind: AcceptMergeRequestResultKind.ClosedMergeRequest,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequestInfo.state !== MergeState.Opened) {
+		throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
+	}
+
+	if (!mergeRequest.blocking_discussions_resolved) {
+		return {
+			kind: AcceptMergeRequestResultKind.UnresolvedDiscussion,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (!containsAssignedUser(mergeRequestInfo, user)) {
+		return {
+			kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequestInfo.rebase_in_progress) {
+		return {
+			kind: AcceptMergeRequestResultKind.RebaseInProgress,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequestInfo.merge_status === MergeStatus.Checking) {
+		return {
+			kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequest.has_conflicts) {
+		return {
+			kind: AcceptMergeRequestResultKind.HasConflict,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequestInfo.work_in_progress) {
+		return {
+			kind: AcceptMergeRequestResultKind.WorkInProgress,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (mergeRequestInfo.head_pipeline !== null && startingOrInProgressPipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)) {
+		return {
+			kind: AcceptMergeRequestResultKind.PipelineInProgress,
+			mergeRequestInfo,
+			user,
+			pipeline: mergeRequestInfo.head_pipeline
+		};
+	}
+
+	if (mergeRequestInfo.pipeline !== null && startingOrInProgressPipelineStatuses.includes(mergeRequestInfo.pipeline.status)) {
+		return {
+			kind: AcceptMergeRequestResultKind.PipelineInProgress,
+			mergeRequestInfo,
+			user,
+			pipeline: mergeRequestInfo.pipeline
+		};
+	}
+
+	const useSquash = mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest;
 	if (mergeRequestInfo.squash && !useSquash) {
 		// Because usage `squash=false` during accept MR has no effect and it just uses squash setting from the MR
 		await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
@@ -243,7 +363,12 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 		const mergeResponse = await acceptMergeRequest(gitlabApi, mergeRequest, user, options);
 		if (
 			mergeResponse.kind === AcceptMergeRequestResultKind.SuccessfullyMerged
+			|| mergeResponse.kind === AcceptMergeRequestResultKind.ClosedMergeRequest
 			|| mergeResponse.kind === AcceptMergeRequestResultKind.Unauthorized
+			|| mergeResponse.kind === AcceptMergeRequestResultKind.WorkInProgress
+			|| mergeResponse.kind === AcceptMergeRequestResultKind.UnresolvedDiscussion
+			|| mergeResponse.kind === AcceptMergeRequestResultKind.ReassignedMergeRequest
+			|| mergeResponse.kind === AcceptMergeRequestResultKind.HasConflict
 		) {
 			return mergeResponse;
 		}
@@ -251,69 +376,30 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 		const mergeRequestInfo = mergeResponse.mergeRequestInfo;
 		const tasks: Promise<any>[] = [sleep(options.ciInterval)];
 
-		if (mergeRequestInfo.state === MergeState.Merged) {
-			return {
-				kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
-				mergeRequestInfo,
-				user,
-			};
-		}
-
-		if (mergeRequestInfo.state === MergeState.Closed) {
-			return {
-				kind: AcceptMergeRequestResultKind.ClosedMergeRequest,
-				mergeRequestInfo,
-				user,
-			};
-		}
-
-		if (mergeRequestInfo.state !== MergeState.Opened) {
-			throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
-		}
-
-		if (!mergeRequest.blocking_discussions_resolved) {
-			return {
-				kind: AcceptMergeRequestResultKind.UnresolvedDiscussion,
-				mergeRequestInfo,
-				user,
-			};
-		}
-
-		if (!containsAssignedUser(mergeRequestInfo, user)) {
-			return {
-				kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
-				mergeRequestInfo,
-				user,
-			};
-		}
-
-		if (mergeRequestInfo.rebase_in_progress) {
+		if (mergeResponse.kind === AcceptMergeRequestResultKind.RebaseInProgress) {
 			console.log(`[MR][${mergeRequestInfo.iid}] Still rebasing`);
 			await Promise.all(tasks);
 			continue;
 		}
 
-		if (mergeRequestInfo.merge_status === MergeStatus.Checking) {
+		if (mergeResponse.kind === AcceptMergeRequestResultKind.CheckingMergeStatus) {
 			console.log(`[MR][${mergeRequestInfo.iid}] Still checking merge status`);
 			await Promise.all(tasks);
 			continue;
 		}
 
-		if (mergeRequest.has_conflicts) {
-			return {
-				kind: AcceptMergeRequestResultKind.HasConflict,
-				mergeRequestInfo,
-				user,
-			};
-		}
+		if (mergeResponse.kind === AcceptMergeRequestResultKind.PipelineInProgress) {
+			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
+				tasks.push(
+					gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
+						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
+					}),
+				);
+			}
 
-		if (mergeRequestInfo.work_in_progress) {
-			console.log(`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge request is still in progress`);
-			return {
-				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
-				mergeRequestInfo,
-				user,
-			};
+			console.log(`[MR][${mergeRequestInfo.iid}] Waiting for CI. Current status: ${mergeResponse.pipeline.status}`);
+			await Promise.all(tasks);
+			continue;
 		}
 
 		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
