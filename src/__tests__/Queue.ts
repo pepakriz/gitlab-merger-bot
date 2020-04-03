@@ -31,5 +31,5 @@ it('hasJob while processing', async () => {
 	queue.runJob('fooJob', () => sleep(20), JobPriority.NORMAL);
 	await sleep(10);
 
-	expect(queue.hasJob('fooJob', JobPriority.NORMAL)).toBe(true);
+	expect(queue.findPriorityByJobId('fooJob')).toBe(JobPriority.NORMAL);
 });

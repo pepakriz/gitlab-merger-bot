@@ -55,8 +55,8 @@ spec:
           value: "{{ .Values.settings.sentryDsn }}"
         - name: SKIP_SQUASHING_LABEL
           value: "{{ .Values.settings.skipSquashingLabel }}"
-        - name: HI_PRIORITY_LABEL
-          value: "{{ .Values.settings.hiPriorityLabel }}"
+        - name: HIGH_PRIORITY_LABEL
+          value: "{{ .Values.settings.highPriorityLabel }}"
         resources:
 {{ toYaml .Values.resources | indent 10 }}
 {{- if .Values.nodeSelector }}

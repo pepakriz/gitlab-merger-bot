@@ -30,4 +30,4 @@ settings:
   squashMergeRequest: true
   autorunManualBlockingJobs: true
   skipSquashingLabel: ""
-  hiPriorityLabel: ""
+  highPriorityLabel: ""
