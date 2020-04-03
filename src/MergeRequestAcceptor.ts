@@ -13,6 +13,7 @@ import {
 } from './GitlabApi';
 import { tryCancelPipeline } from './PipelineCanceller';
 import { sleep } from './Utils';
+import { setBotLabels } from './BotLabelsSetter';
 
 export enum AcceptMergeRequestResultKind {
 	SuccessfullyMerged,
@@ -342,12 +343,6 @@ export const acceptMergeRequest = async (
 		throw new Error('Invalid response');
 	}
 
-	if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
-		await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-			labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
-		});
-	}
-
 	return {
 		kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
 		mergeRequestInfo,
@@ -358,6 +353,10 @@ export const acceptMergeRequest = async (
 export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
 	let numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 	let numberOfRebasingRetries = defaultRebasingRetries;
+
+	if (!containsLabel(mergeRequest.labels, BotLabels.Accepting)) {
+		await setBotLabels(gitlabApi, mergeRequest, [BotLabels.Accepting]);
+	}
 
 	while (true) {
 		const mergeResponse = await acceptMergeRequest(gitlabApi, mergeRequest, user, options);
@@ -391,9 +390,7 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 		if (mergeResponse.kind === AcceptMergeRequestResultKind.PipelineInProgress) {
 			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
 				tasks.push(
-					gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-						labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
-					}),
+					setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting, BotLabels.WaitingForPipeline]),
 				);
 			}
 
@@ -422,9 +419,7 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 				};
 			}
 
-			await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-				labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Rebasing].join(','),
-			});
+			await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting, BotLabels.Rebasing]);
 			console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
 			await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 			await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
@@ -444,9 +439,7 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 		}
 
 		if (containsLabel(mergeRequestInfo.labels, BotLabels.Rebasing)) {
-			await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-				labels: [...filterBotLabels(mergeRequestInfo.labels)].join(','),
-			});
+			await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting]);
 		}
 
 		let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
@@ -484,9 +477,7 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 			if (startingOrInProgressPipelineStatuses.includes(currentPipeline.status)) {
 				if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
 					tasks.push(
-						gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-							labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.WaitingForPipeline].join(','),
-						}),
+						setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting, BotLabels.WaitingForPipeline]),
 					);
 				}
 
@@ -540,6 +531,10 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 			) {
 				throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 			}
+		}
+
+		if (containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
+			await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting]);
 		}
 
 		await Promise.all(tasks);
