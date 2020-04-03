@@ -159,10 +159,19 @@ export const acceptMergeRequest = async (
 ): Promise<MergeMergeRequestResult> => {
 	console.log(`[MR][${mergeRequest.iid}] Calling merge request`);
 	const mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
+	const useSquash = mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest;
+
+	if (mergeRequestInfo.squash && !useSquash) {
+		// Because usage `squash=false` during accept MR has no effect and it just uses squash setting from the MR
+		await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
+			squash: false,
+		});
+	}
+
 	const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`, RequestMethod.Put, {
 		should_remove_source_branch: options.removeBranchAfterMerge,
 		sha: mergeRequestInfo.diff_refs.head_sha,
-		squash: mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest,
+		squash: useSquash,
 		squash_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
 		merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
 	});
