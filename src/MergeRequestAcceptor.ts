@@ -297,8 +297,8 @@ export const acceptMergeRequest = async (
 		merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
 	});
 
-	if (response.status === 405) {
-		console.log(`[MR][${mergeRequestInfo.iid}] 405 - cannot be merged`);
+	if (response.status === 405 || response.status === 406) {
+		console.log(`[MR][${mergeRequestInfo.iid}] ${response.status} - cannot be merged`);
 		return {
 			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 			mergeRequestInfo,
@@ -306,17 +306,8 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (response.status === 406) {
-		console.log(`[MR][${mergeRequestInfo.iid}] 406 - already merged`);
-		return {
-			kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
-			mergeRequestInfo,
-			user,
-		};
-	}
-
 	if (response.status === 409) {
-		console.log(`[MR][${mergeRequestInfo.iid}] 409 - SHA does not match HEAD of source branch`);
+		console.log(`[MR][${mergeRequestInfo.iid}] ${response.status} - SHA does not match HEAD of source branch`);
 		return {
 			kind: AcceptMergeRequestResultKind.InvalidSha,
 			mergeRequestInfo,
@@ -325,7 +316,7 @@ export const acceptMergeRequest = async (
 	}
 
 	if (response.status === 401) {
-		console.log(`[MR][${mergeRequestInfo.iid}] 409 - Unauthorized`);
+		console.log(`[MR][${mergeRequestInfo.iid}] ${response.status} - Unauthorized`);
 		return {
 			kind: AcceptMergeRequestResultKind.Unauthorized,
 			mergeRequestInfo,
