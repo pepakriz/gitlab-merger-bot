@@ -19,17 +19,19 @@ if (SENTRY_DSN !== '') {
 	Sentry.init({ dsn: SENTRY_DSN });
 }
 
-const GITLAB_URL = env.get('GITLAB_URL').default('https://gitlab.com').asUrlString();
-const GITLAB_AUTH_TOKEN = env.get('GITLAB_AUTH_TOKEN').required().asString();
-const CI_CHECK_INTERVAL = env.get('CI_CHECK_INTERVAL').default('10').asIntPositive() * 1000;
-const MR_CHECK_INTERVAL = env.get('MR_CHECK_INTERVAL').default('20').asIntPositive() * 1000;
-const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE').default('true').asBoolStrict();
-const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST').default('true').asBoolStrict();
-const AUTORUN_MANUAL_BLOCKING_JOBS = env.get('AUTORUN_MANUAL_BLOCKING_JOBS').default('true').asBoolStrict();
-const SKIP_SQUASHING_LABEL = env.get('SKIP_SQUASHING_LABEL').default('bot:skip-squash').asString();
-const HIGH_PRIORITY_LABEL = env.get('HIGH_PRIORITY_LABEL').default('bot:high-priority').asString();
+const config = {
+	GITLAB_URL: env.get('GITLAB_URL').default('https://gitlab.com').asUrlString(),
+	GITLAB_AUTH_TOKEN: env.get('GITLAB_AUTH_TOKEN').required().asString(),
+	CI_CHECK_INTERVAL: env.get('CI_CHECK_INTERVAL').default('10').asIntPositive() * 1000,
+	MR_CHECK_INTERVAL: env.get('MR_CHECK_INTERVAL').default('20').asIntPositive() * 1000,
+	REMOVE_BRANCH_AFTER_MERGE: env.get('REMOVE_BRANCH_AFTER_MERGE').default('true').asBoolStrict(),
+	SQUASH_MERGE_REQUEST: env.get('SQUASH_MERGE_REQUEST').default('true').asBoolStrict(),
+	AUTORUN_MANUAL_BLOCKING_JOBS: env.get('AUTORUN_MANUAL_BLOCKING_JOBS').default('true').asBoolStrict(),
+	SKIP_SQUASHING_LABEL: env.get('SKIP_SQUASHING_LABEL').default('bot:skip-squash').asString(),
+	HIGH_PRIORITY_LABEL: env.get('HIGH_PRIORITY_LABEL').default('bot:high-priority').asString(),
+};
 
-const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN);
+const gitlabApi = new GitlabApi(config.GITLAB_URL, config.GITLAB_AUTH_TOKEN);
 const worker = new Worker();
 
 const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
@@ -228,7 +230,7 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			return;
 		}
 
-		const jobPriority = mergeRequest.labels.includes(HIGH_PRIORITY_LABEL) ? JobPriority.HIGH : JobPriority.NORMAL;
+		const jobPriority = mergeRequest.labels.includes(config.HIGH_PRIORITY_LABEL) ? JobPriority.HIGH : JobPriority.NORMAL;
 		const jobId = `accept-merge-${mergeRequest.id}`;
 
 		const currentJobPriority = worker.findJobPriorityInQueue(mergeRequest.target_project_id, jobId);
@@ -237,11 +239,11 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 		}
 
 		const options = {
-			ciInterval: CI_CHECK_INTERVAL,
-			removeBranchAfterMerge: REMOVE_BRANCH_AFTER_MERGE,
-			squashMergeRequest: SQUASH_MERGE_REQUEST,
-			skipSquashingLabel: SKIP_SQUASHING_LABEL,
-			autorunManualBlockingJobs: AUTORUN_MANUAL_BLOCKING_JOBS,
+			ciInterval: config.CI_CHECK_INTERVAL,
+			removeBranchAfterMerge: config.REMOVE_BRANCH_AFTER_MERGE,
+			squashMergeRequest: config.SQUASH_MERGE_REQUEST,
+			skipSquashingLabel: config.SKIP_SQUASHING_LABEL,
+			autorunManualBlockingJobs: config.AUTORUN_MANUAL_BLOCKING_JOBS,
 		};
 
 		if (jobPriority === JobPriority.HIGH) {
@@ -276,10 +278,19 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 
 	await Promise.all(possibleToAcceptMergeRequests);
 
-	setTimeout(() => runMergeRequestCheckerLoop(user), MR_CHECK_INTERVAL);
+	setTimeout(() => runMergeRequestCheckerLoop(user), config.MR_CHECK_INTERVAL);
+};
+
+const printConfig = () => {
+	console.log(`Configuration:`);
+	console.log(JSON.stringify({
+		...config,
+		GITLAB_AUTH_TOKEN: '*******',
+	}, null, 4));
 };
 
 (async () => {
+	printConfig();
 	const user = await gitlabApi.getMe();
 	console.log(`[bot] Hi, I'm ${user.name}. I'll accept merge request assigned to me.`);
 
