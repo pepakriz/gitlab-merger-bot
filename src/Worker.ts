@@ -4,7 +4,18 @@ export class Worker {
 
 	private queues: Queue[] = [];
 
-	public hasJobInQueue(
+	public findJobPriorityInQueue(
+		queueId: number,
+		jobId: string,
+	) {
+		if (typeof this.queues[queueId] === 'undefined') {
+			return null;
+		}
+
+		return this.queues[queueId].findPriorityByJobId(jobId);
+	}
+
+	public setJobPriority(
 		queueId: number,
 		jobId: string,
 		jobPriority: JobPriority,
@@ -13,12 +24,12 @@ export class Worker {
 			return false;
 		}
 
-		return this.queues[queueId].hasJob(jobId, jobPriority);
+		return this.queues[queueId].setJobPriority(jobId, jobPriority);
 	}
 
 	public addJobToQueue<T extends Promise<any>>(
 		queueId: number,
-		queuePosition: JobPriority,
+		jobPriority: JobPriority,
 		jobId: string,
 		job: () => T,
 	): T {
@@ -26,7 +37,7 @@ export class Worker {
 			this.queues[queueId] = new Queue();
 		}
 
-		return this.queues[queueId].runJob(jobId, job, queuePosition);
+		return this.queues[queueId].runJob(jobId, job, jobPriority);
 	}
 
 }

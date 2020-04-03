@@ -4,10 +4,10 @@ import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { setBotLabels } from './BotLabelsSetter';
 import { GitlabApi, MergeRequest, MergeStatus, User } from './GitlabApi';
 import {
-	acceptMergeRequest,
+	runAcceptingMergeRequest,
 	AcceptMergeRequestResult,
 	AcceptMergeRequestResultKind,
-	BotLabels,
+	BotLabels, acceptMergeRequest,
 } from './MergeRequestAcceptor';
 import { tryCancelPipeline } from './PipelineCanceller';
 import { JobPriority } from './Queue';
@@ -27,7 +27,7 @@ const REMOVE_BRANCH_AFTER_MERGE = env.get('REMOVE_BRANCH_AFTER_MERGE').default('
 const SQUASH_MERGE_REQUEST = env.get('SQUASH_MERGE_REQUEST').default('true').asBoolStrict();
 const AUTORUN_MANUAL_BLOCKING_JOBS = env.get('AUTORUN_MANUAL_BLOCKING_JOBS').default('true').asBoolStrict();
 const SKIP_SQUASHING_LABEL = env.get('SKIP_SQUASHING_LABEL').default('bot:skip-squash').asString();
-const HI_PRIORITY_LABEL = env.get('HI_PRIORITY_LABEL').default('bot:hi-priority').asString();
+const HIGH_PRIORITY_LABEL = env.get('HIGH_PRIORITY_LABEL').default('bot:high-priority').asString();
 
 const gitlabApi = new GitlabApi(GITLAB_URL, GITLAB_AUTH_TOKEN);
 const worker = new Worker();
@@ -37,7 +37,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	const user = result.user;
 
 	if (result.kind === AcceptMergeRequestResultKind.SuccessfullyMerged) {
-		console.log(`[MR] Merge request is merged, ending`);
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is merged, ending`);
 		await setBotLabels(gitlabApi, mergeRequestInfo, []);
 		return;
 	}
@@ -51,7 +51,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 			message += `: ${errorMessage}`;
 		}
 
-		console.log(`[MR] merge failed: ${message}, assigning back`);
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -63,7 +63,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.HasConflict) {
-		console.log(`[MR] MR has conflict`);
+		console.log(`[MR][${mergeRequestInfo.iid}] MR has conflict`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -75,7 +75,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.ClosedMergeRequest) {
-		console.log(`[MR] Merge request is closed, ending`);
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is closed, ending`);
 
 		await Promise.all([
 			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
@@ -86,7 +86,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.ReassignedMergeRequest) {
-		console.log(`[MR] Merge request is assigned to different user, ending`);
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is assigned to different user, ending`);
 
 		await Promise.all([
 			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),
@@ -97,7 +97,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.FailedPipeline) {
-		console.log(`[MR] pipeline is in failed state: ${result.pipeline.status}, assigning back`);
+		console.log(`[MR][${mergeRequestInfo.iid}] pipeline is in failed state: ${result.pipeline.status}, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -108,7 +108,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.WaitingPipeline) {
-		console.log(`[MR] pipeline is waiting for a manual action: ${result.pipeline.status}, assigning back`);
+		console.log(`[MR][${mergeRequestInfo.iid}] pipeline is waiting for a manual action: ${result.pipeline.status}, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -119,7 +119,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.WaitingForApprovals) {
-		console.log(`[MR] Merge request is waiting for approvals, assigning back`);
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is waiting for approvals, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -130,7 +130,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.UnresolvedDiscussion) {
-		console.log(`[MR] Merge request has unresolved discussion, assigning back`);
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request has unresolved discussion, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -154,7 +154,7 @@ const resolveMergeRequestResult = async (result: AcceptMergeRequestResult) => {
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.Unauthorized) {
-		console.log(`[MR] You don't have permissions to accept this merge request, assigning back`);
+		console.log(`[MR][${mergeRequestInfo.iid}] You don't have permissions to accept this merge request, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
@@ -228,23 +228,47 @@ const runMergeRequestCheckerLoop = async (user: User) => {
 			return;
 		}
 
-		const jobPriority = mergeRequest.labels.includes(HI_PRIORITY_LABEL) ? JobPriority.HI : JobPriority.NORMAL;
+		const jobPriority = mergeRequest.labels.includes(HIGH_PRIORITY_LABEL) ? JobPriority.HIGH : JobPriority.NORMAL;
 		const jobId = `accept-merge-${mergeRequest.id}`;
-		if (worker.hasJobInQueue(mergeRequest.target_project_id, jobId, jobPriority)) {
+
+		const currentJobPriority = worker.findJobPriorityInQueue(mergeRequest.target_project_id, jobId);
+		if (currentJobPriority === jobPriority) {
 			return;
 		}
 
+		const options = {
+			ciInterval: CI_CHECK_INTERVAL,
+			removeBranchAfterMerge: REMOVE_BRANCH_AFTER_MERGE,
+			squashMergeRequest: SQUASH_MERGE_REQUEST,
+			skipSquashingLabel: SKIP_SQUASHING_LABEL,
+			autorunManualBlockingJobs: AUTORUN_MANUAL_BLOCKING_JOBS,
+		};
+
+		if (jobPriority === JobPriority.HIGH) {
+			const mergeResponse = await acceptMergeRequest(gitlabApi, mergeRequest, user, options);
+			if (mergeResponse.kind === AcceptMergeRequestResultKind.SuccessfullyMerged) {
+				console.log(`[loop][MR][${mergeRequest.iid}] High-priority merge request is merged`);
+				return;
+			}
+			console.log(`[loop][MR][${mergeRequest.iid}] High-priority merge request is not acceptable in this moment.`);
+		}
+
+		if (currentJobPriority !== null) {
+			console.log(`[loop][MR][${mergeRequest.iid}] Changing job priority to ${jobPriority}.`);
+			worker.setJobPriority(
+				mergeRequest.target_project_id,
+				jobId,
+				jobPriority,
+			);
+			return;
+		}
+
+		console.log(`[loop][MR][${mergeRequest.iid}] Adding job to the queue with ${jobPriority} priority.`);
 		worker.addJobToQueue(
 			mergeRequest.target_project_id,
 			jobPriority,
 			jobId,
-			() => acceptMergeRequest(gitlabApi, mergeRequest, user, {
-				ciInterval: CI_CHECK_INTERVAL,
-				removeBranchAfterMerge: REMOVE_BRANCH_AFTER_MERGE,
-				squashMergeRequest: SQUASH_MERGE_REQUEST,
-				skipSquashingLabel: SKIP_SQUASHING_LABEL,
-				autorunManualBlockingJobs: AUTORUN_MANUAL_BLOCKING_JOBS,
-			}),
+			() => runAcceptingMergeRequest(gitlabApi, mergeRequest, user, options),
 		).then(resolveMergeRequestResult);
 
 		await setBotLabels(gitlabApi, mergeRequest, [BotLabels.InMergeQueue]);

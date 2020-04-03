@@ -26,6 +26,7 @@ export enum AcceptMergeRequestResultKind {
 	WaitingForApprovals,
 	UnresolvedDiscussion,
 	Unauthorized,
+	InvalidSha,
 }
 
 interface Response {
@@ -92,6 +93,11 @@ interface UnauthorizedResponse extends Response {
 	mergeRequestInfo: MergeRequestInfo;
 }
 
+interface InvalidShaResponse extends Response {
+	kind: AcceptMergeRequestResultKind.InvalidSha;
+	mergeRequestInfo: MergeRequestInfo;
+}
+
 export type AcceptMergeRequestResult = SuccessResponse
 	| ClosedMergeRequestResponse
 	| ReassignedMergeRequestResponse
@@ -102,6 +108,11 @@ export type AcceptMergeRequestResult = SuccessResponse
 	| WaitingPipelineResponse
 	| WaitingForApprovalsResponse
 	| UnresolvedDiscussionResponse
+	| UnauthorizedResponse;
+
+export type MergeMergeRequestResult = SuccessResponse
+	| CanNotBeMergedResponse
+	| InvalidShaResponse
 	| UnauthorizedResponse;
 
 interface AcceptMergeRequestOptions {
@@ -140,22 +151,96 @@ export const filterBotLabels = (labels: string[]): string[] => {
 	return labels.filter((label) => !values.includes(label));
 };
 
-export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
-	let mergeRequestInfo: MergeRequestInfo;
+export const acceptMergeRequest = async (
+	gitlabApi: GitlabApi,
+	mergeRequest: MergeRequest,
+	user: User,
+	options: AcceptMergeRequestOptions,
+): Promise<MergeMergeRequestResult> => {
+	console.log(`[MR][${mergeRequest.iid}] Calling merge request`);
+	const mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
+	const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`, RequestMethod.Put, {
+		should_remove_source_branch: options.removeBranchAfterMerge,
+		sha: mergeRequestInfo.diff_refs.head_sha,
+		squash: mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest,
+		squash_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
+		merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
+	});
+
+	if (response.status === 405) {
+		console.log(`[MR][${mergeRequestInfo.iid}] 405 - cannot be merged`);
+		return {
+			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (response.status === 406) {
+		console.log(`[MR][${mergeRequestInfo.iid}] 406 - already merged`);
+		return {
+			kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (response.status === 409) {
+		console.log(`[MR][${mergeRequestInfo.iid}] 409 - SHA does not match HEAD of source branch`);
+		return {
+			kind: AcceptMergeRequestResultKind.InvalidSha,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (response.status === 401) {
+		console.log(`[MR][${mergeRequestInfo.iid}] 409 - Unauthorized`);
+		return {
+			kind: AcceptMergeRequestResultKind.Unauthorized,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
+	if (response.status !== 200) {
+		throw new Error(`Unsupported response status ${response.status}`);
+	}
+
+	const data = await response.json();
+	if (typeof data !== 'object' && data.id === undefined) {
+		console.error('response', data);
+		throw new Error('Invalid response');
+	}
+
+	if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
+		await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
+			labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
+		});
+	}
+
+	return {
+		kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
+		mergeRequestInfo,
+		user,
+	};
+};
+
+export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: MergeRequest, user: User, options: AcceptMergeRequestOptions): Promise<AcceptMergeRequestResult> => {
 	let numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
 	let numberOfRebasingRetries = defaultRebasingRetries;
 
 	while (true) {
-		const tasks: Promise<any>[] = [sleep(options.ciInterval)];
-		mergeRequestInfo = await gitlabApi.getMergeRequestInfo(mergeRequest.project_id, mergeRequest.iid);
-
-		if (!containsAssignedUser(mergeRequestInfo, user)) {
-			return {
-				kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
-				mergeRequestInfo,
-				user,
-			};
+		const mergeResponse = await acceptMergeRequest(gitlabApi, mergeRequest, user, options);
+		if (
+			mergeResponse.kind === AcceptMergeRequestResultKind.SuccessfullyMerged
+			|| mergeResponse.kind === AcceptMergeRequestResultKind.Unauthorized
+		) {
+			return mergeResponse;
 		}
+
+		const mergeRequestInfo = mergeResponse.mergeRequestInfo;
+		const tasks: Promise<any>[] = [sleep(options.ciInterval)];
 
 		if (mergeRequestInfo.state === MergeState.Merged) {
 			return {
@@ -185,13 +270,11 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			};
 		}
 
-		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
-		if (approvals.approvals_left > 0) {
+		if (!containsAssignedUser(mergeRequestInfo, user)) {
 			return {
-				kind: AcceptMergeRequestResultKind.WaitingForApprovals,
+				kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
 				mergeRequestInfo,
 				user,
-				approvals,
 			};
 		}
 
@@ -221,6 +304,16 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
 				user,
+			};
+		}
+
+		const approvals = await gitlabApi.getMergeRequestApprovals(mergeRequestInfo.project_id, mergeRequestInfo.iid);
+		if (approvals.approvals_left > 0) {
+			return {
+				kind: AcceptMergeRequestResultKind.WaitingForApprovals,
+				mergeRequestInfo,
+				user,
+				approvals,
 			};
 		}
 
@@ -354,57 +447,6 @@ export const acceptMergeRequest = async (gitlabApi: GitlabApi, mergeRequest: Mer
 			}
 		}
 
-		console.log(`[MR][${mergeRequestInfo.iid}] Calling merge request`);
-		const response = await gitlabApi.sendRawRequest(`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`, RequestMethod.Put, {
-			should_remove_source_branch: options.removeBranchAfterMerge,
-			sha: mergeRequestInfo.diff_refs.head_sha,
-			squash: mergeRequestInfo.labels.includes(options.skipSquashingLabel) ? false : options.squashMergeRequest,
-			squash_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
-			merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
-		});
-
-		if (response.status === 405) {
-			console.log(`[MR][${mergeRequestInfo.iid}] 405 - cannot be merged`);
-			continue;
-		}
-
-		if (response.status === 406) {
-			console.log(`[MR][${mergeRequestInfo.iid}] 406 - already merged`);
-			continue;
-		}
-
-		if (response.status === 409) {
-			console.log(`[MR][${mergeRequestInfo.iid}] 409 - SHA does not match HEAD of source branch`);
-			continue;
-		}
-
-		if (response.status === 401) {
-			return {
-				kind: AcceptMergeRequestResultKind.Unauthorized,
-				mergeRequestInfo,
-				user,
-			};
-		}
-
-		if (response.status !== 200) {
-			throw new Error(`Unsupported response status ${response.status}`);
-		}
-
-		const data = await response.json();
-		if (typeof data !== 'object' && data.id === undefined) {
-			console.error('response', data);
-			throw new Error('Invalid response');
-		}
-
-		if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
-			tasks.push(
-				gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-					labels: [...filterBotLabels(mergeRequestInfo.labels), BotLabels.Accepting].join(','),
-				}),
-			);
-		}
-
-		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is processing`);
 		await Promise.all(tasks);
 	}
 };

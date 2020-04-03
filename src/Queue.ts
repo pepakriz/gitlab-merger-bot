@@ -1,6 +1,6 @@
 export enum JobPriority {
-	HI,
-	NORMAL,
+	HIGH = 'high',
+	NORMAL = 'normal',
 }
 
 interface Jobs {
@@ -11,21 +11,20 @@ export class Queue {
 
 	private promise?: Promise<void>;
 	private jobs: { [key in JobPriority]: Jobs } = {
-		[JobPriority.HI]: {},
+		[JobPriority.HIGH]: {},
 		[JobPriority.NORMAL]: {},
 	};
 
-	public hasJob(
+	public setJobPriority(
 		jobId: string,
 		jobPriority: JobPriority,
 	): boolean {
-		const currentJobPriority = this.getPriorityByJobId(jobId);
+		const currentJobPriority = this.findPriorityByJobId(jobId);
 		if (currentJobPriority === null) {
 			return false;
 		}
 
-		if (currentJobPriority === JobPriority.NORMAL && jobPriority === JobPriority.HI) {
-			console.log(`[job][${jobId}] Job has been moved to the prioritized queue`);
+		if (currentJobPriority === JobPriority.NORMAL && jobPriority === JobPriority.HIGH) {
 			this.jobs[jobPriority][jobId] = this.jobs[currentJobPriority][jobId];
 			delete this.jobs[currentJobPriority][jobId];
 		}
@@ -33,12 +32,24 @@ export class Queue {
 		return true;
 	}
 
+	public findPriorityByJobId(jobId: string): JobPriority | null {
+		if (typeof this.jobs[JobPriority.HIGH][jobId] !== 'undefined') {
+			return JobPriority.HIGH;
+		}
+
+		if (typeof this.jobs[JobPriority.NORMAL][jobId] !== 'undefined') {
+			return JobPriority.NORMAL;
+		}
+
+		return null;
+	}
+
 	public runJob<T extends Promise<any>>(
 		jobId: string,
 		job: () => T,
 		jobPriority: JobPriority,
 	): T {
-		const currentJobPriority = this.getPriorityByJobId(jobId);
+		const currentJobPriority = this.findPriorityByJobId(jobId);
 		if (currentJobPriority !== null) {
 			throw new Error(`JobId ${jobId} is already in queue`);
 		}
@@ -51,7 +62,7 @@ export class Queue {
 					reject(e);
 				}
 
-				const runtimeJobPriority = this.getPriorityByJobId(jobId);
+				const runtimeJobPriority = this.findPriorityByJobId(jobId);
 				if (runtimeJobPriority === null) {
 					throw new Error(`JobId ${jobId} not found`);
 				}
@@ -65,8 +76,8 @@ export class Queue {
 		if (this.promise === undefined) {
 			this.promise = new Promise(async (resolve, reject) => {
 				while (true) {
-					let jobIds = Object.keys(this.jobs[JobPriority.HI]);
-					let priority = JobPriority.HI;
+					let jobIds = Object.keys(this.jobs[JobPriority.HIGH]);
+					let priority = JobPriority.HIGH;
 
 					if (jobIds.length === 0) {
 						jobIds = Object.keys(this.jobs[JobPriority.NORMAL]);
@@ -91,18 +102,6 @@ export class Queue {
 		}
 
 		return jobPromise as T;
-	}
-
-	private getPriorityByJobId(jobId: string): JobPriority | null {
-		if (typeof this.jobs[JobPriority.HI][jobId] !== 'undefined') {
-			return JobPriority.HI;
-		}
-
-		if (typeof this.jobs[JobPriority.NORMAL][jobId] !== 'undefined') {
-			return JobPriority.NORMAL;
-		}
-
-		return null;
 	}
 
 }
