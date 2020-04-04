@@ -160,7 +160,6 @@ interface AcceptMergeRequestOptions {
 
 export enum BotLabels {
 	InMergeQueue = 'in-merge-queue',
-	Rebasing = 'rebasing',
 	Accepting = 'accepting',
 	WaitingForPipeline = 'waiting-for-pipeline',
 }
@@ -410,7 +409,6 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 				};
 			}
 
-			await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting, BotLabels.Rebasing]);
 			console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
 			await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 			await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
@@ -427,10 +425,6 @@ export const runAcceptingMergeRequest = async (gitlabApi: GitlabApi, mergeReques
 				mergeRequestInfo,
 				user,
 			};
-		}
-
-		if (containsLabel(mergeRequestInfo.labels, BotLabels.Rebasing)) {
-			await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting]);
 		}
 
 		let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
