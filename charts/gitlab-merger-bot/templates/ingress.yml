@@ -1,0 +1,49 @@
+{{- if .Values.ingress.enabled }}
+{{- $ := . }}
+{{- $routePrefix := list .Values.ingress.routePrefix }}
+{{- $paths := .Values.ingress.paths | default $routePrefix -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ include "gitlab-merger-bot.fullname" . }}
+{{- if .Values.ingress.annotations }}
+  annotations:
+{{ toYaml .Values.ingress.annotations | indent 4 }}
+{{- end }}
+  labels:
+    app: {{ include "gitlab-merger-bot.name" . }}
+    chart: {{ include "gitlab-merger-bot.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+{{- if .Values.ingress.labels }}
+{{ toYaml .Values.ingress.labels | indent 4 }}
+{{- end }}
+spec:
+  rules:
+  {{- if .Values.ingress.hosts }}
+  {{- range $host := .Values.ingress.hosts }}
+    - host: {{ tpl $host $ }}
+      http:
+        paths:
+  {{- range $p := $paths }}
+          - path: {{ tpl $p $ }}
+            backend:
+              serviceName: {{ include "gitlab-merger-bot.fullname" $ }}
+              servicePort: {{ $.Values.service.port }}
+  {{- end -}}
+  {{- end -}}
+  {{- else }}
+    - http:
+        paths:
+  {{- range $p := $paths }}
+          - path: {{ tpl $p $ }}
+            backend:
+              serviceName: {{ include "gitlab-merger-bot.fullname" $ }}
+              servicePort: {{ $.Values.service.port }}
+  {{- end -}}
+  {{- end -}}
+  {{- if .Values.ingress.tls }}
+  tls:
+{{ toYaml .Values.ingress.tls | indent 4 }}
+  {{- end -}}
+{{- end -}}

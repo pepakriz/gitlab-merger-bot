@@ -3,16 +3,16 @@ restartPolicy: Never
 
 image:
   repository: pepakriz/gitlab-merger-bot
-  tag: latest
+  tag: v2.0.0-beta1
   pullPolicy: IfNotPresent
 
 resources:
   requests:
     cpu: 50m
-    memory: 64Mi
+    memory: 192Mi
   limits:
     cpu: 150m
-    memory: 64Mi
+    memory: 192Mi
 
 annotations: {}
 labels: {}
@@ -20,6 +20,27 @@ nodeSelector: {}
 tolerations: []
 podAnnotations: {}
 env: {}
+
+ingress:
+  enabled: false
+  routePrefix: "/"
+  annotations: {}
+  labels: {}
+  hosts: []
+  paths: []
+  tls: {}
+
+service:
+  annotations: {}
+  labels: {}
+  clusterIP: ""
+  externalIPs: []
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  type: "ClusterIP"
+  nodePort: "30044"
+  port: "4000"
+  targetPort: "4000"
 
 settings:
   gitlabUrl: "https://gitlab.com"
@@ -32,3 +53,6 @@ settings:
   autorunManualBlockingJobs: true
   skipSquashingLabel: ""
   highPriorityLabel: ""
+  httpServerEnable: false
+  httpServerPort: 4000
+  webHookToken: ""
