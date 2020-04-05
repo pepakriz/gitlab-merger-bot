@@ -214,7 +214,7 @@ export const acceptMergeRequest = async (
 		throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
 	}
 
-	if (!mergeRequest.blocking_discussions_resolved) {
+	if (!mergeRequestInfo.blocking_discussions_resolved) {
 		return {
 			kind: AcceptMergeRequestResultKind.UnresolvedDiscussion,
 			mergeRequestInfo,
@@ -246,7 +246,7 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (mergeRequest.has_conflicts) {
+	if (mergeRequestInfo.has_conflicts) {
 		return {
 			kind: AcceptMergeRequestResultKind.HasConflict,
 			mergeRequestInfo,
