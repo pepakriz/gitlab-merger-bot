@@ -1,0 +1,16 @@
+config:
+  useIndexSignature: true
+  scalars:
+    Uuid: Uuid
+    CheckSeverity: number
+    CheckImpact: number
+
+generates:
+  ./src/generated/graphqlgen.ts:
+    schema: ./schema.graphql
+    plugins:
+      - typescript
+      - typescript-resolvers
+    hooks:
+      afterOneFileWrite:
+        - prettier --write

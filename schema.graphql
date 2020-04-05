@@ -1,0 +1,50 @@
+type JobInfoMergeRequest {
+	iid: Int!
+	projectId: Int!
+	title: String!
+	webUrl: String!
+	authorId: Int!
+}
+
+type JobInfo {
+	mergeRequest: JobInfoMergeRequest!
+}
+
+type Job {
+	status: String!
+	info: JobInfo!
+}
+
+type QueueInfo {
+	projectName: String!
+}
+
+type Queue {
+	name: String!
+	info: QueueInfo!
+	high: [Job!]!
+	normal: [Job!]!
+}
+
+type User {
+	id: Int!
+	name: String!
+	username: String!
+	email: String!
+	webUrl: String!
+	avatarUrl: String!
+}
+
+input UserInput {
+	id: Int!
+}
+
+type Query {
+	me: User!
+	user(input: UserInput!): User
+	queues: [Queue!]!
+}
+
+type Subscription {
+	queues: [Queue!]!
+}

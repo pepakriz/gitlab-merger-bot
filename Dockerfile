@@ -1,19 +1,37 @@
 FROM node:12.16.1-alpine AS build
 WORKDIR /app
 
-COPY ./package.json ./yarn.lock ./
+COPY ./package.json ./yarn.lock ./schema.graphql ./codegen.yml ./
 
 RUN set -ex \
 	&& yarn install
 
-COPY ./ /app
+COPY ./ ./
 
 RUN set -ex \
 	&& yarn run build \
 	&& yarn run build-bin
 
+
+FROM node:12.16.1-alpine AS dashboard-build
+WORKDIR /app/dashboard
+
+COPY ./dashboard/package.json ./dashboard/yarn.lock ./
+COPY ./schema.graphql ./codegen.yml ../
+
+RUN set -ex \
+	&& yarn install
+
+COPY ./dashboard ./
+
+RUN set -ex \
+	&& yarn run build \
+	&& yarn run export
+
+
 FROM alpine:3.11
-CMD ["/bin/gitlab-merger-bot"]
+WORKDIR /app
+CMD ["/app/gitlab-merger-bot"]
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
 
@@ -24,4 +42,5 @@ RUN set -ex \
 		libgcc \
 	&& mkdir -p /data
 
-COPY --from=build /app/gitlab-merger-bot /bin/
+COPY --from=build /app/gitlab-merger-bot /app/schema.graphql /app/
+COPY --from=dashboard-build /app/dashboard/out /app/dashboard/out/

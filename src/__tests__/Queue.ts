@@ -1,35 +1,48 @@
 import { JobPriority, Queue } from '../Queue';
-import { sleep } from '../Utils';
+import { defaultConfig } from '../Config';
+
+const jobInfoMock = {
+	mergeRequest: {
+		title: 'title',
+		webUrl: 'webUrl',
+		projectId: 1,
+		authorId: 1,
+		iid: 2,
+	},
+};
+
+const queueInfoMock = {
+	projectName: 'test',
+};
+
+const onChange = jest.fn();
 
 it('runs two jobs', async () => {
-	const job = jest.fn();
+	const job1 = jest.fn(({ success }) => {
+		success();
+	});
+	const job2 = jest.fn();
+	const job3 = jest.fn();
 
-	const queue = new Queue();
-	queue.runJob('fooJob', job, JobPriority.NORMAL);
-	const task = queue.runJob('barJob', job, JobPriority.NORMAL);
+	const queue = new Queue(defaultConfig, queueInfoMock, onChange);
 
-	expect(job.mock.calls.length).toBe(0);
-	await task;
-	expect(job.mock.calls.length).toBe(2);
-});
+	queue.registerJob('job1', job1, JobPriority.NORMAL, jobInfoMock);
+	queue.registerJob('job2', job2, JobPriority.NORMAL, jobInfoMock);
+	queue.registerJob('job3', job3, JobPriority.NORMAL, jobInfoMock);
 
-it('runs again after done', async () => {
-	const job = jest.fn();
-
-	const queue = new Queue();
-	await queue.runJob('fooJob', job, JobPriority.NORMAL);
-
-	expect(job.mock.calls.length).toBe(1);
-	await queue.runJob('barJob', job, JobPriority.NORMAL);
-	expect(job.mock.calls.length).toBe(2);
-	await queue.runJob('barJob', job, JobPriority.NORMAL);
-	expect(job.mock.calls.length).toBe(3);
-});
-
-it('hasJob while processing', async () => {
-	const queue = new Queue();
-	queue.runJob('fooJob', () => sleep(20), JobPriority.NORMAL);
-	await sleep(10);
-
-	expect(queue.findPriorityByJobId('fooJob')).toBe(JobPriority.NORMAL);
+	expect(job1.mock.calls.length).toBe(0);
+	expect(job2.mock.calls.length).toBe(0);
+	expect(job3.mock.calls.length).toBe(0);
+	await queue.tick();
+	expect(job1.mock.calls.length).toBe(1);
+	expect(job2.mock.calls.length).toBe(1);
+	expect(job3.mock.calls.length).toBe(0);
+	await queue.tick();
+	expect(job1.mock.calls.length).toBe(1);
+	expect(job2.mock.calls.length).toBe(2);
+	expect(job3.mock.calls.length).toBe(0);
+	await queue.tick();
+	expect(job1.mock.calls.length).toBe(1);
+	expect(job2.mock.calls.length).toBe(3);
+	expect(job3.mock.calls.length).toBe(0);
 });
