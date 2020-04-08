@@ -57,6 +57,10 @@ spec:
           value: "{{ .Values.settings.skipSquashingLabel }}"
         - name: HIGH_PRIORITY_LABEL
           value: "{{ .Values.settings.highPriorityLabel }}"
+{{- range $key, $value := .Values.env }}
+        - name: "{{ $key }}"
+          value: "{{ $value }}"
+{{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
 {{- if .Values.nodeSelector }}

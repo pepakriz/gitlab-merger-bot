@@ -19,6 +19,7 @@ labels: {}
 nodeSelector: {}
 tolerations: []
 podAnnotations: {}
+env: {}
 
 settings:
   gitlabUrl: "https://gitlab.com"
