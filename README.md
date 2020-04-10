@@ -94,3 +94,15 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `SKIP_SQUASHING_LABEL` | `bot:skip-squash` | It'll skip squash when MR contains this label |
 | `HI_PRIORITY_LABEL` | `bot:high-priority` | It'll put MR with this label to the beginning of the queue |
 | `SENTRY_DSN` | `` | It'll enable Sentry monitoring |
+| `HTTP_SERVER_ENABLE` | `false` | It'll enable experimental API and dashboard support |
+| `HTTP_SERVER_PORT` | `4000` | It'll use different http server port |
+| `WEB_HOOK_TOKEN` | `` | It'll enable experimental web hook support |
+
+## Development
+
+For web hook development use this:
+
+```bash
+NGROK_AUTH=<authCode>
+docker run -it --rm --net=host -p 4040:4040 -e NGROK_AUTH="$NGROK_AUTH" wernight/ngrok ngrok http 4000
+```

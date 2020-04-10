@@ -1,26 +1,47 @@
 import { JobPriority } from '../Queue';
 import { Worker } from '../Worker';
+import { defaultConfig } from '../Config';
+import { PubSub } from 'apollo-server';
+
+const jobInfoMock = {
+	mergeRequest: {
+		title: 'title',
+		webUrl: 'webUrl',
+		projectId: 1,
+		authorId: 1,
+		iid: 2,
+	},
+};
+
+const queueInfoMock = {
+	projectName: 'test',
+};
+
+const config = {
+	...defaultConfig,
+	GITLAB_AUTH_TOKEN: 'foo',
+};
 
 it('runs two jobs', async () => {
 	const job1 = jest.fn();
+	const job2 = jest.fn();
 
-	const worker = new Worker();
-	const tasks = [];
+	const pubSub = new PubSub();
+	const worker = new Worker(pubSub, config);
 
 	expect(worker.findJobPriorityInQueue(1, 'fooJob')).toBe(null);
 	expect(worker.findJobPriorityInQueue(2, 'fooJob')).toBe(null);
 
-	tasks.push(worker.addJobToQueue(1, JobPriority.NORMAL, 'fooJob', job1));
+	worker.registerJobToQueue(1, queueInfoMock, JobPriority.NORMAL, 'fooJob', job1, jobInfoMock);
 
 	expect(worker.findJobPriorityInQueue(1, 'fooJob')).toBe(JobPriority.NORMAL);
 	expect(worker.findJobPriorityInQueue(2, 'fooJob')).toBe(null);
 
-	tasks.push(worker.addJobToQueue(2, JobPriority.NORMAL, 'fooJob', job1));
+	worker.registerJobToQueue(2, queueInfoMock, JobPriority.NORMAL, 'fooJob', job2, jobInfoMock);
 
 	expect(worker.findJobPriorityInQueue(1, 'fooJob')).toBe(JobPriority.NORMAL);
 	expect(worker.findJobPriorityInQueue(2, 'fooJob')).toBe(JobPriority.NORMAL);
 
 	expect(job1.mock.calls.length).toBe(0);
-	await Promise.all(tasks);
-	expect(job1.mock.calls.length).toBe(2);
+	expect(job2.mock.calls.length).toBe(0);
 });

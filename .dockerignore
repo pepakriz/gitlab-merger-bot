@@ -1,4 +1,9 @@
+/.idea
+/.github
 /node_modules
+/dashboard/node_modules
+/dashboard/.next
+/dashboard/out
 /yarn-error.log
 /lib
 /data

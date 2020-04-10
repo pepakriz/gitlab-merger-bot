@@ -1,0 +1,22 @@
+config:
+  avoidOptionals:
+    inputValue: false
+    object: true
+  preResolveTypes: true
+  skipTypename: true
+  immutableTypes: true
+  scalars:
+    Uuid: Uuid
+    CheckSeverity: number
+    CheckImpact: number
+
+generates:
+  ./src/types.ts:
+    schema: ../schema.graphql
+    documents: "src/**/*.{ts,tsx}"
+    plugins:
+      - typescript
+      - typescript-operations
+    hooks:
+      afterOneFileWrite:
+        - prettier --write
