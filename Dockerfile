@@ -19,8 +19,10 @@ WORKDIR /app/dashboard
 COPY ./dashboard/package.json ./dashboard/yarn.lock ./
 COPY ./schema.graphql ./codegen.yml ../
 
+# We run yarn install with an increased network timeout (5min) to avoid "ESOCKETTIMEDOUT" errors from hub.docker.com
+# See, for example https://github.com/yarnpkg/yarn/issues/5540
 RUN set -ex \
-	&& yarn install
+	&& yarn install --network-timeout 300000
 
 COPY ./dashboard ./
 
