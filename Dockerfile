@@ -16,8 +16,8 @@ RUN set -ex \
 FROM node:12.16.1-alpine AS dashboard-build
 WORKDIR /app/dashboard
 
-COPY ./dashboard/package.json ./dashboard/yarn.lock ./
-COPY ./schema.graphql ./codegen.yml ../
+COPY ./dashboard/package.json ./dashboard/yarn.lock ./dashboard/codegen.yml ./
+COPY ./schema.graphql ../
 
 # We run yarn install with an increased network timeout (5min) to avoid "ESOCKETTIMEDOUT" errors from hub.docker.com
 # See, for example https://github.com/yarnpkg/yarn/issues/5540
@@ -27,6 +27,7 @@ RUN set -ex \
 COPY ./dashboard ./
 
 RUN set -ex \
+	&& yarn run generate \
 	&& yarn run build \
 	&& yarn run export
 
