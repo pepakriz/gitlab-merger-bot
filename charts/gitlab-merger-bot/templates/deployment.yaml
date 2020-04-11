@@ -57,6 +57,12 @@ spec:
           value: "{{ .Values.settings.skipSquashingLabel }}"
         - name: HIGH_PRIORITY_LABEL
           value: "{{ .Values.settings.highPriorityLabel }}"
+        - name: HTTP_SERVER_ENABLE
+          value: "{{ .Values.settings.httpServerEnable }}"
+        - name: HTTP_SERVER_PORT
+          value: "{{ .Values.settings.httpServerPort }}"
+        - name: WEB_HOOK_TOKEN
+          value: "{{ .Values.settings.webHookToken }}"
 {{- range $key, $value := .Values.env }}
         - name: "{{ $key }}"
           value: "{{ $value }}"
