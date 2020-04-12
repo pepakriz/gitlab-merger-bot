@@ -28,7 +28,7 @@ ingress:
   labels: {}
   hosts: []
   paths: []
-  tls: {}
+  tls: []
 
 service:
   annotations: {}
