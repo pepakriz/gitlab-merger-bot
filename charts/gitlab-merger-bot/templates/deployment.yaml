@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "gitlab-merger-bot.fullname" . }}
+  namespace: {{ include "gitlab-merger-bot.namespace" . }}
 {{- if .Values.annotations }}
   annotations:
 {{ toYaml .Values.annotations | indent 4 }}
