@@ -10,9 +10,11 @@ import { ApolloServer, gql } from 'apollo-server-express';
 import { PubSub } from 'apollo-server';
 import http from 'http';
 import { AppEvent } from './Types';
-import { importSchema } from 'graphql-import';
 import { Resolvers } from './generated/graphqlgen';
 import { Config } from './Config';
+
+// @ts-ignore
+import typeDefs from '../schema.graphql';
 
 interface MergeRequestAssignee {
 	username: string;
@@ -204,7 +206,6 @@ export class WebHookServer {
 				},
 			};
 
-			const typeDefs = importSchema(path.join(process.cwd(), 'schema.graphql'));
 			const server = new ApolloServer({
 				typeDefs,
 				resolvers,
