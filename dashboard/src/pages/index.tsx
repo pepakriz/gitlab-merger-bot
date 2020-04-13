@@ -3,10 +3,15 @@ import { withApollo } from '../lib/apollo';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Layout from '../components/layout';
-import { useSubscription } from '@apollo/react-hooks';
+import { useMutation, useSubscription } from '@apollo/react-hooks';
 import gql from 'graphql-tag';
 import OverlayLoading from '../components/ui/overlay-loading';
-import { GetQueuesSubscriptionJobFragment, GetQueuesSubscriptionSubscription } from '../types';
+import {
+	GetQueuesSubscriptionJobFragment,
+	GetQueuesSubscriptionSubscription,
+	UnassignMutation,
+	UnassignMutationVariables,
+} from '../types';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -15,34 +20,68 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
+import ButtonGroup from '@material-ui/core/ButtonGroup';
 import Toolbar from '@material-ui/core/Toolbar';
 import Icon from '@material-ui/icons/Send';
 import { UserAvatar } from '../components/ui/UserAvatar';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 
-const Row = (job: GetQueuesSubscriptionJobFragment) => (
-	<TableRow key={job.info.mergeRequest.iid}>
-		<TableCell component='th'>
-			<UserAvatar userId={job.info.mergeRequest.authorId} />
-		</TableCell>
-		<TableCell component='th' scope='row'>
-			<a href={job.info.mergeRequest.webUrl} target={'_blank'}>
-				{job.info.mergeRequest.iid}: {job.info.mergeRequest.title}
-			</a>
-		</TableCell>
-		<TableCell align='right'>Normal</TableCell>
-		<TableCell align='right'>{job.status}</TableCell>
-		<TableCell align='right'>
-			<Button
-				variant='contained'
-				endIcon={<Icon>send</Icon>}
-				color='primary'
-				onClick={() => window.open(job.info.mergeRequest.webUrl, '_blank')}
-			>
-				Open
-			</Button>
-		</TableCell>
-	</TableRow>
-);
+const Row = (props: GetQueuesSubscriptionJobFragment) => {
+	const [unassign, { loading }] = useMutation<UnassignMutation, UnassignMutationVariables>(gql`
+		mutation Unassign($input: UnassignInput!) {
+			unassign(input: $input)
+		}
+	`);
+	return (
+		<TableRow key={props.info.mergeRequest.iid}>
+			<TableCell component='th'>
+				<UserAvatar userId={props.info.mergeRequest.authorId} />
+			</TableCell>
+			<TableCell component='th' scope='row'>
+				<a href={props.info.mergeRequest.webUrl} target={'_blank'}>
+					{props.info.mergeRequest.iid}: {props.info.mergeRequest.title}
+				</a>
+			</TableCell>
+			<TableCell align='right'>Normal</TableCell>
+			<TableCell align='right'>{props.status}</TableCell>
+			<TableCell align='right'>
+				<ButtonGroup variant='contained' aria-label='contained primary button group'>
+					<Button
+						variant='contained'
+						disabled={loading}
+						onClick={() =>
+							unassign({
+								variables: {
+									input: {
+										projectId: props.info.mergeRequest.projectId,
+										mergeRequestIid: props.info.mergeRequest.iid,
+									},
+								},
+							})
+						}
+					>
+						Unassign
+						{loading && (
+							<CircularProgress
+								size={24}
+								style={{ left: '50%', position: 'absolute', marginLeft: '-12px' }}
+							/>
+						)}
+					</Button>
+					<Button
+						variant='contained'
+						endIcon={<Icon>send</Icon>}
+						color='primary'
+						onClick={() => window.open(props.info.mergeRequest.webUrl, '_blank')}
+					>
+						Open
+					</Button>
+				</ButtonGroup>
+			</TableCell>
+		</TableRow>
+	);
+};
 
 const App = () => {
 	const { loading, error, data } = useSubscription<GetQueuesSubscriptionSubscription>(gql`
@@ -102,8 +141,12 @@ const App = () => {
 										</TableRow>
 									</TableHead>
 									<TableBody>
-										{queue.high.map(Row)}
-										{queue.normal.map(Row)}
+										{queue.high.map((props) => (
+											<Row {...props} key={props.info.mergeRequest.iid}></Row>
+										))}
+										{queue.normal.map((props) => (
+											<Row {...props} key={props.info.mergeRequest.iid}></Row>
+										))}
 									</TableBody>
 								</Table>
 							</TableContainer>

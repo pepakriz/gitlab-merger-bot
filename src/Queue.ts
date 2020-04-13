@@ -171,10 +171,6 @@ export class Queue {
 			return;
 		}
 
-		if (this.jobs[currentJobPriority][jobId].status === JobStatus.IN_PROGRESS) {
-			return;
-		}
-
 		delete this.jobs[currentJobPriority][jobId];
 		this.onChange();
 	}
