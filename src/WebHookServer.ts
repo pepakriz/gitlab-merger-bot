@@ -15,6 +15,7 @@ import { Config } from './Config';
 
 // @ts-ignore
 import typeDefs from '../schema.graphql';
+import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 
 interface MergeRequestAssignee {
 	username: string;
@@ -202,6 +203,19 @@ export class WebHookServer {
 								listenerName,
 							]);
 						},
+					},
+				},
+				Mutation: {
+					unassign: async (parent, { input }) => {
+						const mergeRequest = await this.gitlabApi.getMergeRequest(
+							input.projectId,
+							input.mergeRequestIid,
+						);
+						await assignToAuthorAndResetLabels(this.gitlabApi, mergeRequest, this.user);
+						const jobId = `accept-merge-${mergeRequest.id}`;
+						await this.worker.removeJobFromQueue(mergeRequest.project_id, jobId);
+
+						return null;
 					},
 				},
 			};

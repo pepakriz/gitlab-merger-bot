@@ -96,7 +96,7 @@ function createApolloClient(initialState = {}) {
 	const cache = new InMemoryCache().restore(initialState);
 
 	let apiUrl = process.env.API_URL;
-	if (typeof window !== 'undefined') {
+	if (apiUrl === undefined && typeof window !== 'undefined') {
 		apiUrl = `${window.location.protocol}//${window.location.host}/graphql`;
 	}
 

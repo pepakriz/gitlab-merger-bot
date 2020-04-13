@@ -48,3 +48,14 @@ type Query {
 type Subscription {
 	queues: [Queue!]!
 }
+
+input UnassignInput {
+	projectId: Int!
+	mergeRequestIid: Int!
+}
+
+type Mutation {
+	unassign(
+		input: UnassignInput!
+	): Int
+}
