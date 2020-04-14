@@ -183,8 +183,6 @@ const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 	const userIds = mergeRequest.assignees.map((assignee) => assignee.id);
 	return userIds.includes(user.id);
 };
-const defaultPipelineValidationRetries = 5;
-const defaultRebasingRetries = 1;
 
 export const filterBotLabels = (labels: string[]): string[] => {
 	const values = Object.values(BotLabels) as string[];
@@ -398,9 +396,6 @@ export const runAcceptingMergeRequest = async (
 ): Promise<AcceptMergeRequestResult | void> => {
 	console.log(`[MR][${mergeRequestIid}] Checking...`);
 
-	let numberOfPipelineValidationRetries = defaultPipelineValidationRetries;
-	let numberOfRebasingRetries = defaultRebasingRetries;
-
 	const mergeResponse = await acceptMergeRequest(
 		gitlabApi,
 		projectId,
@@ -440,7 +435,7 @@ export const runAcceptingMergeRequest = async (
 	}
 
 	if (mergeRequestInfo.diverged_commits_count > 0) {
-		if (numberOfRebasingRetries <= 0 && mergeRequestInfo.merge_error !== null) {
+		if (!mergeRequestInfo.rebase_in_progress && mergeRequestInfo.merge_error !== null) {
 			console.log(`[MR][${mergeRequestInfo.iid}] Merge error after rebase`);
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
@@ -452,7 +447,6 @@ export const runAcceptingMergeRequest = async (
 		console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
 		await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 		await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
-		numberOfRebasingRetries--;
 		job.updateStatus(JobStatus.REBASING);
 		return;
 	}
@@ -513,11 +507,6 @@ export const runAcceptingMergeRequest = async (
 						? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
 						: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
 				console.log(message);
-
-				if (numberOfPipelineValidationRetries > 0) {
-					numberOfPipelineValidationRetries--;
-					return;
-				}
 
 				return {
 					kind: AcceptMergeRequestResultKind.InvalidPipeline,
