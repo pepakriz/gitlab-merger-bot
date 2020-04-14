@@ -7,7 +7,7 @@ config:
 
 generates:
   ./src/generated/graphqlgen.ts:
-    schema: ./schema.graphql
+    schema: ../schema.graphql
     plugins:
       - typescript
       - typescript-resolvers

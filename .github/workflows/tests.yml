@@ -20,7 +20,7 @@ jobs:
         uses: docker://mstruebing/editorconfig-checker:2.0.3
 
       - name: Install
-        run: yarn install
+        run: yarn install && yarn run generate
 
       - name: Lint
         run: yarn run check:cs

@@ -1,0 +1,19 @@
+{
+	"name": "@gitlab-merger-bot/common",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"format": "prettier --write \"**/*.{js,json,ts,tsx}\"",
+		"generate": "true",
+		"check": "yarn run check:cs",
+		"check:cs": "prettier --check \"**/*.{js,json,ts,tsx}\"",
+		"check:types": "true",
+		"check:tests": "true"
+	},
+	"devDependencies": {
+		"husky": "^4.2.3",
+		"pkg": "^4.4.4",
+		"prettier": "^2.0.4",
+		"pretty-quick": "^2.0.1"
+	}
+}

@@ -1,6 +1,6 @@
 /.idea/
 /.github/
 /charts/
-/dashboard/.next/
-/dashboard/out/
-/lib/
+/dashboard/
+/server/
+/common/
