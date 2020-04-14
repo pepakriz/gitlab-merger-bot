@@ -12,5 +12,5 @@
 			"*": ["node_modules/*", "src/types/*"]
 		}
 	},
-	"include": ["src/**/*", "schema.graphql"]
+	"include": ["src/**/*", "../schema.graphql"]
 }

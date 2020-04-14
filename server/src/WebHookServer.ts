@@ -14,7 +14,7 @@ import { Resolvers } from './generated/graphqlgen';
 import { Config } from './Config';
 
 // @ts-ignore
-import typeDefs from '../schema.graphql';
+import typeDefs from '../../schema.graphql';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 
 interface MergeRequestAssignee {

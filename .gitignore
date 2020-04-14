@@ -1,6 +1,4 @@
 /.envrc
 /node_modules
 /yarn-error.log
-/lib
 /gitlab-merger-bot
-/src/generated/
