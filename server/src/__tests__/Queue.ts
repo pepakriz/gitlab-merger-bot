@@ -1,5 +1,6 @@
-import { JobPriority, Queue } from '../Queue';
+import { Queue } from '../Queue';
 import { defaultConfig } from '../Config';
+import { JobPriority } from '../Job';
 
 const jobInfoMock = {
 	mergeRequest: {

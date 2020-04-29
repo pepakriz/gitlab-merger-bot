@@ -25,20 +25,33 @@ export interface JobArgs {
 	job: Job;
 }
 
+export enum JobPriority {
+	HIGH = 'high',
+	NORMAL = 'normal',
+}
+
 export type JobFunction = (args: JobArgs) => Promise<unknown> | unknown;
 
 export class Job {
 	private _info: JobInfo;
 	private _status: JobStatus;
+	private _priority: JobPriority;
 
 	private readonly _id: string;
 	private readonly _fn: JobFunction;
 	private readonly onChange: () => unknown;
 
-	constructor(id: string, fn: JobFunction, info: JobInfo, onChange: () => unknown) {
+	constructor(
+		id: string,
+		fn: JobFunction,
+		info: JobInfo,
+		priority: JobPriority,
+		onChange: () => unknown,
+	) {
 		this._id = id;
 		this._fn = fn;
 		this._info = info;
+		this._priority = priority;
 		this.onChange = onChange;
 
 		this._status = JobStatus.WAITING;
@@ -62,6 +75,15 @@ export class Job {
 		this.onChange();
 	}
 
+	public updatePriority(priority: JobPriority): void {
+		if (deepEqual(this._priority, priority)) {
+			return;
+		}
+
+		this._priority = priority;
+		this.onChange();
+	}
+
 	public run(args: JobArgs): Promise<unknown> | unknown {
 		return this._fn(args);
 	}
@@ -76,5 +98,17 @@ export class Job {
 
 	get info(): JobInfo {
 		return this._info;
+	}
+
+	get priority(): JobPriority {
+		return this._priority;
+	}
+
+	public getData() {
+		return {
+			priority: this.priority,
+			info: this.info,
+			status: this.status,
+		};
 	}
 }

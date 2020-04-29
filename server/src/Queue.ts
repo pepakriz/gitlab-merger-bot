@@ -1,14 +1,5 @@
 import { Config } from './Config';
-import { Job, JobFunction, JobInfo, JobStatus } from './Job';
-
-export enum JobPriority {
-	HIGH = 'high',
-	NORMAL = 'normal',
-}
-
-interface Jobs {
-	[key: string]: Job;
-}
+import { Job, JobFunction, JobInfo, JobPriority, JobStatus } from './Job';
 
 export interface QueueInfo {
 	projectName: string;
@@ -17,10 +8,7 @@ export interface QueueInfo {
 export class Queue {
 	private _stop: boolean = true;
 	private timer: NodeJS.Timeout | null = null;
-	private jobs: { [key in JobPriority]: Jobs } = {
-		[JobPriority.HIGH]: {},
-		[JobPriority.NORMAL]: {},
-	};
+	private jobs: Job[] = [];
 	private onStop: (() => unknown) | null = null;
 
 	private readonly config: Config;
@@ -83,21 +71,15 @@ export class Queue {
 	}
 
 	public isEmpty(): boolean {
-		return (
-			Object.keys(this.jobs[JobPriority.NORMAL]).length === 0 &&
-			Object.keys(this.jobs[JobPriority.HIGH]).length === 0
-		);
+		return this.jobs.length === 0;
 	}
 
-	public findHighPrioritizedJob(): Job | null {
-		let jobIds = Object.keys(this.jobs[JobPriority.HIGH]);
-		if (jobIds.length > 0) {
-			return this.jobs[JobPriority.HIGH][jobIds[0]];
-		}
-
-		jobIds = Object.keys(this.jobs[JobPriority.NORMAL]);
-		if (jobIds.length > 0) {
-			return this.jobs[JobPriority.NORMAL][jobIds[0]];
+	private findHighPrioritizedJob(): Job | null {
+		for (let priority of [JobPriority.HIGH, JobPriority.NORMAL]) {
+			const job = this.jobs.find((job) => job.priority === priority);
+			if (job !== undefined) {
+				return job;
+			}
 		}
 
 		return null;
@@ -139,61 +121,42 @@ export class Queue {
 	public getData() {
 		return {
 			info: this.info,
-			[JobPriority.HIGH]: Object.keys(this.jobs[JobPriority.HIGH]).map((key) => ({
-				status: this.jobs[JobPriority.HIGH][key].status,
-				info: this.jobs[JobPriority.HIGH][key].info,
-			})),
-			[JobPriority.NORMAL]: Object.keys(this.jobs[JobPriority.NORMAL]).map((key) => ({
-				status: this.jobs[JobPriority.NORMAL][key].status,
-				info: this.jobs[JobPriority.NORMAL][key].info,
-			})),
+			jobs: this.jobs.map((job) => job.getData()),
 		};
 	}
 
-	public setJobPriority(jobId: string, jobPriority: JobPriority): boolean {
-		const currentJobPriority = this.findPriorityByJobId(jobId);
-		if (currentJobPriority === null) {
-			return false;
-		}
-
-		if (currentJobPriority === JobPriority.NORMAL && jobPriority === JobPriority.HIGH) {
-			this.jobs[jobPriority][jobId] = this.jobs[currentJobPriority][jobId];
-			delete this.jobs[currentJobPriority][jobId];
-			this.onChange();
-		}
-
-		return true;
-	}
-
-	public removeJob(jobId: string) {
-		const currentJobPriority = this.findPriorityByJobId(jobId);
-		if (currentJobPriority === null) {
+	public setJobPriority(jobId: string, jobPriority: JobPriority): void {
+		const currentJob = this.findJob(jobId);
+		if (currentJob === null) {
 			return;
 		}
 
-		delete this.jobs[currentJobPriority][jobId];
+		currentJob.updatePriority(jobPriority);
+	}
+
+	public removeJob(jobId: string): void {
+		let jobIndex = this.jobs.findIndex((job) => job.id === jobId);
+		if (jobIndex === -1) {
+			return;
+		}
+
+		this.jobs.splice(jobIndex, 1);
 		this.onChange();
 	}
 
 	public findPriorityByJobId(jobId: string): JobPriority | null {
-		if (typeof this.jobs[JobPriority.HIGH][jobId] !== 'undefined') {
-			return JobPriority.HIGH;
-		}
-
-		if (typeof this.jobs[JobPriority.NORMAL][jobId] !== 'undefined') {
-			return JobPriority.NORMAL;
+		const job = this.findJob(jobId);
+		if (job !== null) {
+			return job.priority;
 		}
 
 		return null;
 	}
 
 	public findJob(jobId: string): Job | null {
-		if (typeof this.jobs[JobPriority.HIGH][jobId] !== 'undefined') {
-			return this.jobs[JobPriority.HIGH][jobId];
-		}
-
-		if (typeof this.jobs[JobPriority.NORMAL][jobId] !== 'undefined') {
-			return this.jobs[JobPriority.NORMAL][jobId];
+		let job = this.jobs.find((job) => job.id === jobId);
+		if (job !== undefined) {
+			return job;
 		}
 
 		return null;
@@ -205,12 +168,14 @@ export class Queue {
 		jobPriority: JobPriority,
 		jobInfo: JobInfo,
 	): void {
-		const currentJobPriority = this.findPriorityByJobId(jobId);
-		if (currentJobPriority !== null) {
+		const currentJob = this.findJob(jobId);
+		if (currentJob !== null) {
+			currentJob.updateStatus(JobStatus.WAITING);
+			currentJob.updateInfo(jobInfo);
 			return;
 		}
 
-		this.jobs[jobPriority][jobId] = new Job(jobId, job, jobInfo, this.onChange);
+		this.jobs.push(new Job(jobId, job, jobInfo, jobPriority, this.onChange));
 
 		this.onChange();
 	}

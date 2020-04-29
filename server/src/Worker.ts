@@ -1,8 +1,8 @@
-import { JobPriority, Queue, QueueInfo } from './Queue';
+import { Queue, QueueInfo } from './Queue';
 import { PubSub } from 'apollo-server';
 import { AppEvent } from './Types';
 import { Config } from './Config';
-import { Job, JobFunction, JobInfo } from './Job';
+import { Job, JobFunction, JobInfo, JobPriority } from './Job';
 
 export class Worker {
 	private _stop: boolean = true;
@@ -63,12 +63,12 @@ export class Worker {
 		return this.queues[queueId].findJob(jobId);
 	}
 
-	public setJobPriority(queueId: number, jobId: string, jobPriority: JobPriority): boolean {
+	public setJobPriority(queueId: number, jobId: string, jobPriority: JobPriority): void {
 		if (typeof this.queues[queueId] === 'undefined') {
-			return false;
+			return;
 		}
 
-		return this.queues[queueId].setJobPriority(jobId, jobPriority);
+		this.queues[queueId].setJobPriority(jobId, jobPriority);
 	}
 
 	public async removeJobFromQueue(queueId: number, jobId: string) {

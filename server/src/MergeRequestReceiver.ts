@@ -1,7 +1,6 @@
 import { GitlabApi, MergeRequest, MergeStatus, User } from './GitlabApi';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { sendNote } from './SendNote';
-import { JobPriority } from './Queue';
 import {
 	acceptMergeRequest,
 	AcceptMergeRequestResultKind,
@@ -12,7 +11,7 @@ import { resolveMergeRequestResult } from './MergeRequestResultResolver';
 import { setBotLabels } from './BotLabelsSetter';
 import { Worker } from './Worker';
 import { Config } from './Config';
-import { JobInfo } from './Job';
+import { JobInfo, JobPriority } from './Job';
 
 export const prepareMergeRequestForMerge = async (
 	gitlabApi: GitlabApi,

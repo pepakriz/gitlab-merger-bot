@@ -1,7 +1,7 @@
-import { JobPriority } from '../Queue';
 import { Worker } from '../Worker';
 import { defaultConfig } from '../Config';
 import { PubSub } from 'apollo-server';
+import { JobPriority } from '../Job';
 
 const jobInfoMock = {
 	mergeRequest: {

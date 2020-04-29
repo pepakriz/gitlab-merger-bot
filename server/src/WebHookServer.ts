@@ -65,8 +65,8 @@ const processMergeRequestHook = async (
 	}
 
 	const jobId = `accept-merge-${data.object_attributes.id}`;
-	const currentJobPriority = worker.findJobPriorityInQueue(data.project.id, jobId);
-	if (currentJobPriority !== null) {
+	const currentJob = worker.findJob(data.project.id, jobId);
+	if (currentJob !== null) {
 		await worker.removeJobFromQueue(data.project.id, jobId);
 	}
 };
