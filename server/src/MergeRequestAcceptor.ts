@@ -478,7 +478,10 @@ export const runAcceptingMergeRequest = async (
 		return;
 	}
 
-	if (mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged) {
+	if (
+		mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged &&
+		mergeRequestInfo.merge_status !== MergeStatus.Unchecked
+	) {
 		console.log(
 			`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge status is ${mergeRequestInfo.merge_status}`,
 		);
