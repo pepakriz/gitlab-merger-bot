@@ -15,7 +15,8 @@ import {
 import { tryCancelPipeline } from './PipelineCanceller';
 import { setBotLabels } from './BotLabelsSetter';
 import { Config } from './Config';
-import { Job, JobStatus } from './Job';
+import { Job } from './Job';
+import { JobStatus } from './generated/graphqlgen';
 
 export enum AcceptMergeRequestResultKind {
 	SuccessfullyMerged,

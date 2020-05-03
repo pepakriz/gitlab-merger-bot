@@ -10,9 +10,22 @@ type JobInfo {
 	mergeRequest: JobInfoMergeRequest!
 }
 
+enum JobPriority {
+	HIGH
+	NORMAL
+}
+
+enum JobStatus {
+	IN_PROGRESSJobStatus
+	REBASING
+	CHECKING_MERGE_STATUS
+	WAITING
+	WAITING_FOR_CI
+}
+
 type Job {
-	priority: String!
-	status: String!
+	priority: JobPriority!
+	status: JobStatus!
 	info: JobInfo!
 }
 

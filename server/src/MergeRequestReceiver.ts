@@ -11,7 +11,7 @@ import { resolveMergeRequestResult } from './MergeRequestResultResolver';
 import { setBotLabels } from './BotLabelsSetter';
 import { Worker } from './Worker';
 import { Config } from './Config';
-import { JobInfo, JobPriority } from './Job';
+import { JobInfo, JobPriority } from './generated/graphqlgen';
 
 export const prepareMergeRequestForMerge = async (
 	gitlabApi: GitlabApi,

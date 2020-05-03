@@ -1,5 +1,7 @@
 config:
   useIndexSignature: true
+  namingConvention:
+    enumValues: upper-case
   scalars:
     Uuid: Uuid
     CheckSeverity: number

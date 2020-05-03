@@ -1,8 +1,8 @@
 import { Queue } from '../Queue';
 import { defaultConfig } from '../Config';
-import { JobPriority } from '../Job';
+import { JobInfo, JobPriority, QueueInfo } from '../generated/graphqlgen';
 
-const jobInfoMock = {
+const jobInfoMock: JobInfo = {
 	mergeRequest: {
 		title: 'title',
 		webUrl: 'webUrl',
@@ -12,7 +12,7 @@ const jobInfoMock = {
 	},
 };
 
-const queueInfoMock = {
+const queueInfoMock: QueueInfo = {
 	projectName: 'test',
 };
 
