@@ -1,33 +1,9 @@
 import deepEqual from 'fast-deep-equal';
-
-export enum JobStatus {
-	IN_PROGRESS = 'in_progress',
-	REBASING = 'rebasing',
-	CHECKING_MERGE_STATUS = 'checking_merge_status',
-	WAITING = 'waiting',
-	WAITING_FOR_CI = 'waiting_for_ci',
-}
-
-interface JobMergeRequest {
-	iid: number;
-	projectId: number;
-	authorId: number;
-	title: string;
-	webUrl: string;
-}
-
-export interface JobInfo {
-	mergeRequest: JobMergeRequest;
-}
+import { JobInfo, JobPriority, JobStatus, Job as GQLJob } from './generated/graphqlgen';
 
 export interface JobArgs {
 	success: () => void;
 	job: Job;
-}
-
-export enum JobPriority {
-	HIGH = 'high',
-	NORMAL = 'normal',
 }
 
 export type JobFunction = (args: JobArgs) => Promise<unknown> | unknown;
@@ -104,7 +80,7 @@ export class Job {
 		return this._priority;
 	}
 
-	public getData() {
+	public getData(): GQLJob {
 		return {
 			priority: this.priority,
 			info: this.info,

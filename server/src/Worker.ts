@@ -1,8 +1,9 @@
-import { Queue, QueueInfo } from './Queue';
+import { Queue } from './Queue';
 import { PubSub } from 'apollo-server';
 import { AppEvent } from './Types';
 import { Config } from './Config';
-import { Job, JobFunction, JobInfo, JobPriority } from './Job';
+import { Job, JobFunction } from './Job';
+import { JobInfo, JobPriority, QueueInfo, Queue as GQLQueue } from './generated/graphqlgen';
 
 export class Worker {
 	private _stop: boolean = true;
@@ -16,7 +17,7 @@ export class Worker {
 		this.config = config;
 	}
 
-	public getQueuesData() {
+	public getQueuesData(): GQLQueue[] {
 		return Object.entries(this.queues).map(([key, value]) => ({
 			name: key,
 			...value.getData(),

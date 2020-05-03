@@ -1,9 +1,6 @@
 import { Config } from './Config';
-import { Job, JobFunction, JobInfo, JobPriority, JobStatus } from './Job';
-
-export interface QueueInfo {
-	projectName: string;
-}
+import { Job, JobFunction } from './Job';
+import { JobInfo, JobPriority, JobStatus, QueueInfo } from './generated/graphqlgen';
 
 export class Queue {
 	private _stop: boolean = true;

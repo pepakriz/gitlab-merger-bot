@@ -1,9 +1,9 @@
 import { Worker } from '../Worker';
 import { defaultConfig } from '../Config';
 import { PubSub } from 'apollo-server';
-import { JobPriority } from '../Job';
+import { JobInfo, JobPriority } from '../generated/graphqlgen';
 
-const jobInfoMock = {
+const jobInfoMock: JobInfo = {
 	mergeRequest: {
 		title: 'title',
 		webUrl: 'webUrl',
