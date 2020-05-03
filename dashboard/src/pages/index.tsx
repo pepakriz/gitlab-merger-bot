@@ -43,7 +43,7 @@ const Row = (props: GetQueuesSubscriptionJobFragment) => {
 					{props.info.mergeRequest.iid}: {props.info.mergeRequest.title}
 				</a>
 			</TableCell>
-			<TableCell align='right'>Normal</TableCell>
+			<TableCell align='right'>{props.priority}</TableCell>
 			<TableCell align='right'>{props.status}</TableCell>
 			<TableCell align='right'>
 				<ButtonGroup variant='contained' aria-label='contained primary button group'>
@@ -87,6 +87,7 @@ const App = () => {
 	const { loading, error, data } = useSubscription<GetQueuesSubscriptionSubscription>(gql`
 		fragment GetQueuesSubscriptionJob on Job {
 			status
+			priority
 			info {
 				mergeRequest {
 					iid
@@ -104,10 +105,7 @@ const App = () => {
 				info {
 					projectName
 				}
-				high {
-					...GetQueuesSubscriptionJob
-				}
-				normal {
+				jobs {
 					...GetQueuesSubscriptionJob
 				}
 			}
@@ -141,10 +139,7 @@ const App = () => {
 										</TableRow>
 									</TableHead>
 									<TableBody>
-										{queue.high.map((props) => (
-											<Row {...props} key={props.info.mergeRequest.iid}></Row>
-										))}
-										{queue.normal.map((props) => (
+										{queue.jobs.map((props) => (
 											<Row {...props} key={props.info.mergeRequest.iid}></Row>
 										))}
 									</TableBody>

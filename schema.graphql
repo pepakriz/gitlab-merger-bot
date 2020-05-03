@@ -11,6 +11,7 @@ type JobInfo {
 }
 
 type Job {
+	priority: String!
 	status: String!
 	info: JobInfo!
 }
@@ -22,8 +23,7 @@ type QueueInfo {
 type Queue {
 	name: String!
 	info: QueueInfo!
-	high: [Job!]!
-	normal: [Job!]!
+	jobs: [Job!]!
 }
 
 type User {
