@@ -1,0 +1,25 @@
+name: Release Docker Image
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Get release version
+        id: get_version
+        run: echo ::set-env name=RELEASE_VERSION::$(echo ${GITHUB_REF:10})
+
+      - name: Publish to Registry
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: pepakriz/gitlab-merger-bot/gitlab-merger-bot
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          tag_semver: true
+          tags: "latest,${{ env.RELEASE_VERSION }}"
