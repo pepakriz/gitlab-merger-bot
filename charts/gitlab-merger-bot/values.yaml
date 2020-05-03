@@ -2,8 +2,8 @@ replicaCount: 1
 restartPolicy: Never
 
 image:
-  repository: pepakriz/gitlab-merger-bot
-  tag: v2.0.0-beta1
+  repository: docker.pkg.github.com/pepakriz/gitlab-merger-bot/gitlab-merger-bot
+  tag: v2.0.0-beta2
   pullPolicy: IfNotPresent
 
 resources:
