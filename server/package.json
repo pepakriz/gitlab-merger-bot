@@ -16,7 +16,7 @@
 	},
 	"dependencies": {
 		"@sentry/node": "^5.13.2",
-		"apollo-server": "^2.11.0",
+		"apollo-server": "^2.14.2",
 		"apollo-server-express": "^2.14.2",
 		"body-parser": "^1.19.0",
 		"env-var": "^6.0.4",
