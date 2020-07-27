@@ -19,7 +19,7 @@ export const resolveMergeRequestResult = async (
 	}
 
 	if (result.kind === AcceptMergeRequestResultKind.WorkInProgress) {
-		const message = "Merge request can't be merged: MR is marked as WIP";
+		const message = "Merge request can't be merged: MR is marked as a draft";
 		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
 
 		await Promise.all([

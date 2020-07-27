@@ -71,11 +71,15 @@ export const prepareMergeRequestForMerge = async (
 	}
 
 	if (mergeRequest.work_in_progress) {
-		console.log(`[loop][MR][${mergeRequest.iid}] Merge request is WIP, assigning back`);
+		console.log(`[loop][MR][${mergeRequest.iid}] Merge request is a draft, assigning back`);
 
 		await Promise.all([
 			assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
-			sendNote(gitlabApi, mergeRequest, `Merge request is marked as WIP, I can't merge it`),
+			sendNote(
+				gitlabApi,
+				mergeRequest,
+				`Merge request is marked as a draft, I can't merge it`,
+			),
 		]);
 
 		return;
