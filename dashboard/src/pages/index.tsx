@@ -3,7 +3,7 @@ import { withApollo } from '../lib/apollo';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import Layout from '../components/layout';
-import { useMutation, useSubscription } from '@apollo/react-hooks';
+import { useMutation, useSubscription } from '@apollo/client';
 import gql from 'graphql-tag';
 import OverlayLoading from '../components/ui/overlay-loading';
 import {

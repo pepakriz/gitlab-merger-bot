@@ -2,14 +2,17 @@ import { NextPage, NextPageContext } from 'next';
 import React from 'react';
 
 import Head from 'next/head';
-import { ApolloProvider } from '@apollo/react-hooks';
-import { ApolloClient } from 'apollo-client';
-import { InMemoryCache, NormalizedCacheObject } from 'apollo-cache-inmemory';
-import { HttpLink } from 'apollo-link-http';
+import {
+	ApolloProvider,
+	ApolloClient,
+	InMemoryCache,
+	NormalizedCacheObject,
+	split,
+} from '@apollo/client';
+import { getMainDefinition } from '@apollo/client/utilities';
+import { HttpLink } from '@apollo/client/link/http';
+import { WebSocketLink } from '@apollo/client/link/ws';
 import fetch from 'isomorphic-unfetch';
-import { WebSocketLink } from 'apollo-link-ws';
-import { getMainDefinition } from 'apollo-utilities';
-import { split } from 'apollo-link';
 
 type TApolloClient = ApolloClient<NormalizedCacheObject>;
 
@@ -51,7 +54,7 @@ export function withApollo(PageComponent: NextPage, { ssr = true } = {}) {
 
 				if (ssr) {
 					try {
-						const { getDataFromTree } = await import('@apollo/react-ssr');
+						const { getDataFromTree } = await import('@apollo/client/react/ssr');
 						await getDataFromTree(
 							<AppTree
 								pageProps={{
