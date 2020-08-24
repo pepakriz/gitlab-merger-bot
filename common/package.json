@@ -12,8 +12,8 @@
 	},
 	"devDependencies": {
 		"husky": "^4.2.3",
-		"pkg": "^4.4.4",
-		"prettier": "^2.0.4",
+		"pkg": "^4.4.9",
+		"prettier": "^2.0.5",
 		"pretty-quick": "^2.0.1"
 	}
 }
