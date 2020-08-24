@@ -387,6 +387,40 @@ export const acceptMergeRequest = async (
 	};
 };
 
+const resolveCurrentPipeline = async (
+	gitlabApi: GitlabApi,
+	user: User,
+	mergeRequestInfo: MergeRequestInfo,
+): Promise<MergeRequestPipeline | null | false> => {
+	let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
+
+	if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
+		const pipelines = await gitlabApi.getMergeRequestPipelines(
+			mergeRequestInfo.project_id,
+			mergeRequestInfo.iid,
+		);
+		if (pipelines.length > 0) {
+			const currentPipelineCandidate = pipelines.find(
+				(pipeline) => pipeline.sha === mergeRequestInfo.sha,
+			);
+
+			if (currentPipelineCandidate === undefined) {
+				const message =
+					mergeRequestInfo.pipeline === null
+						? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
+						: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
+				console.log(message);
+
+				return false;
+			}
+
+			currentPipeline = currentPipelineCandidate;
+		}
+	}
+
+	return currentPipeline;
+};
+
 export const runAcceptingMergeRequest = async (
 	job: Job,
 	gitlabApi: GitlabApi,
@@ -449,6 +483,10 @@ export const runAcceptingMergeRequest = async (
 		await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 		await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
 		job.updateStatus(JobStatus.REBASING);
+		job.updateState((state) => ({
+			...state,
+			checkManualJobs: true,
+		}));
 		return;
 	}
 
@@ -462,6 +500,53 @@ export const runAcceptingMergeRequest = async (
 		console.log(`[MR][${mergeRequestInfo.iid}] Still checking merge status`);
 		job.updateStatus(JobStatus.CHECKING_MERGE_STATUS);
 		return;
+	}
+
+	if (job.state.checkManualJobs) {
+		job.updateState((state) => ({
+			...state,
+			checkManualJobs: false,
+		}));
+		const currentPipeline = await resolveCurrentPipeline(gitlabApi, user, mergeRequestInfo);
+		if (currentPipeline !== null && currentPipeline !== false) {
+			const jobs = uniqueNamedJobsByDate(
+				await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
+			);
+
+			const manualJobsToRun = jobs.filter(
+				(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
+			);
+			const canceledJobsToRun = jobs.filter(
+				(job) => PipelineJobStatus.Canceled === job.status && !job.allow_failure,
+			);
+
+			if (manualJobsToRun.length > 0 || canceledJobsToRun.length > 0) {
+				if (!config.AUTORUN_MANUAL_BLOCKING_JOBS) {
+					return {
+						kind: AcceptMergeRequestResultKind.WaitingPipeline,
+						mergeRequestInfo,
+						user,
+						pipeline: currentPipeline,
+					};
+				}
+
+				console.log(
+					`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
+				);
+				job.updateStatus(JobStatus.WAITING_FOR_CI);
+				await Promise.all(
+					manualJobsToRun.map((job) =>
+						gitlabApi.runJob(mergeRequestInfo.project_id, job.id),
+					),
+				);
+				await Promise.all(
+					canceledJobsToRun.map((job) =>
+						gitlabApi.retryJob(mergeRequestInfo.project_id, job.id),
+					),
+				);
+				return;
+			}
+		}
 	}
 
 	if (mergeResponse.kind === AcceptMergeRequestResultKind.PipelineInProgress) {
@@ -493,35 +578,14 @@ export const runAcceptingMergeRequest = async (
 		};
 	}
 
-	let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
-
-	if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
-		const pipelines = await gitlabApi.getMergeRequestPipelines(
-			mergeRequestInfo.project_id,
-			mergeRequestInfo.iid,
-		);
-		if (pipelines.length > 0) {
-			const currentPipelineCandidate = pipelines.find(
-				(pipeline) => pipeline.sha === mergeRequestInfo.sha,
-			);
-
-			if (currentPipelineCandidate === undefined) {
-				const message =
-					mergeRequestInfo.pipeline === null
-						? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
-						: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
-				console.log(message);
-
-				return {
-					kind: AcceptMergeRequestResultKind.InvalidPipeline,
-					mergeRequestInfo,
-					user,
-					pipeline: mergeRequestInfo.pipeline,
-				};
-			}
-
-			currentPipeline = currentPipelineCandidate;
-		}
+	const currentPipeline = await resolveCurrentPipeline(gitlabApi, user, mergeRequestInfo);
+	if (currentPipeline === false) {
+		return {
+			kind: AcceptMergeRequestResultKind.InvalidPipeline,
+			mergeRequestInfo,
+			user,
+			pipeline: mergeRequestInfo.pipeline,
+		};
 	}
 
 	if (currentPipeline !== null) {
