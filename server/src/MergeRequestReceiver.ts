@@ -52,7 +52,8 @@ export const prepareMergeRequestForMerge = async (
 
 	if (
 		mergeRequest.merge_status !== MergeStatus.CanBeMerged &&
-		mergeRequest.merge_status !== MergeStatus.Checking
+		mergeRequest.merge_status !== MergeStatus.Checking &&
+		mergeRequest.merge_status !== MergeStatus.Unchecked
 	) {
 		console.log(
 			`[loop][MR][${mergeRequest.iid}] Merge request can't be merged. Merge status is ${mergeRequest.merge_status}, assigning back`,
