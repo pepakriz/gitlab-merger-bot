@@ -179,6 +179,12 @@ const startingOrInProgressPipelineStatuses = [
 	PipelineStatus.Preparing,
 ];
 
+const incompletePipelineStatuses = [
+	PipelineStatus.Failed,
+	PipelineStatus.Canceled,
+	PipelineStatus.Skipped,
+];
+
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
 const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 	const userIds = mergeRequest.assignees.map((assignee) => assignee.id);
@@ -287,6 +293,16 @@ export const acceptMergeRequest = async (
 		};
 	}
 
+	// we are behind the target branch, rebase required
+	if (mergeRequestInfo.diverged_commits_count > 0) {
+		console.log(`[MR][${mergeRequestInfo.iid}] Branch has diverged commits`);
+		return {
+			kind: AcceptMergeRequestResultKind.InvalidSha,
+			mergeRequestInfo,
+			user,
+		};
+	}
+
 	if (
 		mergeRequestInfo.head_pipeline !== null &&
 		startingOrInProgressPipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)
@@ -308,6 +324,18 @@ export const acceptMergeRequest = async (
 			mergeRequestInfo,
 			user,
 			pipeline: mergeRequestInfo.pipeline,
+		};
+	}
+
+	// the latest pipeline is incomplete / has failed
+	if (
+		mergeRequestInfo.head_pipeline !== null &&
+		incompletePipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)
+	) {
+		return {
+			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+			mergeRequestInfo,
+			user,
 		};
 	}
 
@@ -342,7 +370,20 @@ export const acceptMergeRequest = async (
 	);
 
 	if (response.status === 405 || response.status === 406) {
-		console.log(`[MR][${mergeRequestInfo.iid}] ${response.status} - cannot be merged`);
+		// GitLab 405 is a mixed state and can be a temporary error
+		// as long as all flags and status indicate that we can merge, retry
+		if (mergeRequestInfo.merge_status === MergeStatus.CanBeMerged) {
+			console.log(
+				`[MR][${mergeRequestInfo.iid}] ${response.status} - cannot be merged but merge status is: ${mergeRequestInfo.merge_status}`,
+			);
+
+			return {
+				kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
+				mergeRequestInfo,
+				user,
+			};
+		}
+
 		return {
 			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 			mergeRequestInfo,
