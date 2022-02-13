@@ -1,6 +1,9 @@
 import fetch, { FetchError, RequestInit, Response } from 'node-fetch';
 import queryString, { ParsedUrlQueryInput } from 'querystring';
 import { sleep } from './Utils';
+import  {HttpsProxyAgent } from 'https-proxy-agent'
+import * as env from 'env-var';
+import * as os from "os";
 
 export interface User {
 	id: number;
@@ -135,10 +138,21 @@ export enum RequestMethod {
 export class GitlabApi {
 	private readonly gitlabUrl: string;
 	private readonly authToken: string;
-
+	private static proxy: HttpsProxyAgent | undefined;
+	private static _init = function (){
+		let proxyEnv = env.get("HTTP_PROXY").default("").asString()
+		if(proxyEnv != ""){
+			console.log("HTTP_PROXY Enabled. Assigning HTTP Proxy")
+			GitlabApi.proxy = new HttpsProxyAgent(proxyEnv)
+			return
+		}
+		console.log("HTTP_PROXY is not Enabled")
+		GitlabApi.proxy = undefined;
+	}();
 	constructor(gitlabUrl: string, authToken: string) {
 		this.gitlabUrl = gitlabUrl;
 		this.authToken = authToken;
+
 	}
 
 	public async getMe(): Promise<User> {
@@ -324,6 +338,8 @@ export class GitlabApi {
 		method: RequestMethod,
 		body?: ParsedUrlQueryInput,
 	): Promise<Response> {
+		// @ts-ignore
+		// @ts-ignore
 		const options: RequestInit = {
 			method,
 			timeout: 10000,
@@ -331,7 +347,9 @@ export class GitlabApi {
 				'Private-Token': this.authToken,
 				'Content-Type': 'application/json',
 			},
+			agent: GitlabApi.proxy
 		};
+
 
 		if (body !== undefined) {
 			if (method === RequestMethod.Get) {

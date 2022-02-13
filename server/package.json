@@ -25,7 +25,8 @@
 		"graphql": "^14.7.0",
 		"node-fetch": "^2.6.1",
 		"serve-static": "^1.14.1",
-		"uuid": "^8.3.0"
+		"uuid": "^8.3.0",
+		"https-proxy-agent": "^5.0.0"
 	},
 	"devDependencies": {
 		"@gitlab-merger-bot/common": "*",
