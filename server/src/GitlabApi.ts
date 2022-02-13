@@ -142,11 +142,9 @@ export class GitlabApi {
 	private static _init = function (){
 		let proxyEnv = env.get("HTTP_PROXY").default("").asString()
 		if(proxyEnv != ""){
-			console.log("HTTP_PROXY Enabled. Assigning HTTP Proxy")
 			GitlabApi.proxy = new HttpsProxyAgent(proxyEnv)
 			return
 		}
-		console.log("HTTP_PROXY is not Enabled")
 		GitlabApi.proxy = undefined;
 	}();
 	constructor(gitlabUrl: string, authToken: string) {
@@ -338,7 +336,6 @@ export class GitlabApi {
 		method: RequestMethod,
 		body?: ParsedUrlQueryInput,
 	): Promise<Response> {
-		// @ts-ignore
 		// @ts-ignore
 		const options: RequestInit = {
 			method,
