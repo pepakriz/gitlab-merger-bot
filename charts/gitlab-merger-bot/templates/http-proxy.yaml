@@ -1,0 +1,10 @@
+{{- if .Values.settings.httpProxy}}
+Kind: Secret
+metadata:
+  name: {{ .Values.settings.httpProxySecretName  }}
+  namespace: {{ include "gitlab-merger-bot.namespace" . }}
+type: Opaque
+data:
+  httpProxy: {{ .Values.settings.httpProxy | b64enc  }}
+
+{{- end }}

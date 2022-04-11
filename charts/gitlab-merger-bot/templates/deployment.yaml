@@ -64,6 +64,13 @@ spec:
           value: "{{ .Values.settings.httpServerPort }}"
         - name: WEB_HOOK_TOKEN
           value: "{{ .Values.settings.webHookToken }}"
+        {{- if .Values.settings.httpProxy }}
+        - name: HTTP_PROXY
+          valueFrom:
+            secretKeyRef:
+              key: httpProxy
+              name: {{ .Values.settings.httpProxySecretName }}
+        {{- end }}
 {{- range $key, $value := .Values.env }}
         - name: "{{ $key }}"
           value: "{{ $value }}"
