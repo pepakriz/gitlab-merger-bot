@@ -82,21 +82,22 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 
 #### Configuration options
 
-| Env variable | Default value |  |
-|-------------------|--------------------|-------------------|
-| `GITLAB_URL` | `https://gitlab.com` | GitLab instance URL  |
-| `GITLAB_AUTH_TOKEN` |  | `required` Your GitLab token |
-| `CI_CHECK_INTERVAL` | `10` | Time between CI checks (in seconds) |
-| `MR_CHECK_INTERVAL` | `20` | Time between merge-requests checks (in seconds) |
-| `REMOVE_BRANCH_AFTER_MERGE` | `true` | It'll remove branch after merge |
-| `SQUASH_MERGE_REQUEST` | `true` | It'll squash commits on merge |
-| `AUTORUN_MANUAL_BLOCKING_JOBS` | `true` | It'll autorun manual blocking jobs before merge |
-| `SKIP_SQUASHING_LABEL` | `bot:skip-squash` | It'll skip squash when MR contains this label |
-| `HI_PRIORITY_LABEL` | `bot:high-priority` | It'll put MR with this label to the beginning of the queue |
-| `SENTRY_DSN` | `` | It'll enable Sentry monitoring |
-| `HTTP_SERVER_ENABLE` | `false` | It'll enable experimental API and dashboard support |
-| `HTTP_SERVER_PORT` | `4000` | It'll use different http server port |
-| `WEB_HOOK_TOKEN` | `` | It'll enable experimental web hook support |
+| Env variable                   | Default value        |                                                            |
+|--------------------------------|----------------------|------------------------------------------------------------|
+| `GITLAB_URL`                   | `https://gitlab.com` | GitLab instance URL                                        |
+| `GITLAB_AUTH_TOKEN`            |                      | `required` Your GitLab token                               |
+| `HTTP_PROXY`                   | ``                   | Use HTTP proxy for API communication                       |
+| `CI_CHECK_INTERVAL`            | `10`                 | Time between CI checks (in seconds)                        |
+| `MR_CHECK_INTERVAL`            | `20`                 | Time between merge-requests checks (in seconds)            |
+| `REMOVE_BRANCH_AFTER_MERGE`    | `true`               | It'll remove branch after merge                            |
+| `SQUASH_MERGE_REQUEST`         | `true`               | It'll squash commits on merge                              |
+| `AUTORUN_MANUAL_BLOCKING_JOBS` | `true`               | It'll autorun manual blocking jobs before merge            |
+| `SKIP_SQUASHING_LABEL`         | `bot:skip-squash`    | It'll skip squash when MR contains this label              |
+| `HI_PRIORITY_LABEL`            | `bot:high-priority`  | It'll put MR with this label to the beginning of the queue |
+| `SENTRY_DSN`                   | ``                   | It'll enable Sentry monitoring                             |
+| `HTTP_SERVER_ENABLE`           | `false`              | It'll enable experimental API and dashboard support        |
+| `HTTP_SERVER_PORT`             | `4000`               | It'll use different http server port                       |
+| `WEB_HOOK_TOKEN`               | ``                   | It'll enable experimental web hook support                 |
 
 ## Development
 
