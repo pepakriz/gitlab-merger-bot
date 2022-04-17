@@ -1,6 +1,7 @@
 import fetch, { FetchError, RequestInit, Response } from 'node-fetch';
 import queryString, { ParsedUrlQueryInput } from 'querystring';
 import { sleep } from './Utils';
+import { HttpsProxyAgent } from 'https-proxy-agent'
 
 export interface User {
 	id: number;
@@ -135,10 +136,14 @@ export enum RequestMethod {
 export class GitlabApi {
 	private readonly gitlabUrl: string;
 	private readonly authToken: string;
+	private readonly httpProxy: HttpsProxyAgent | undefined;
 
-	constructor(gitlabUrl: string, authToken: string) {
+	constructor(gitlabUrl: string, authToken: string, httpProxy: string) {
 		this.gitlabUrl = gitlabUrl;
 		this.authToken = authToken;
+		if (httpProxy !== ""){
+			this.httpProxy = new HttpsProxyAgent(httpProxy);
+		} else this.httpProxy = undefined;
 	}
 
 	public async getMe(): Promise<User> {
@@ -331,6 +336,7 @@ export class GitlabApi {
 				'Private-Token': this.authToken,
 				'Content-Type': 'application/json',
 			},
+			agent: this.httpProxy
 		};
 
 		if (body !== undefined) {

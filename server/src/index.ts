@@ -13,7 +13,7 @@ if (SENTRY_DSN !== '') {
 }
 
 const config = getConfig();
-const gitlabApi = new GitlabApi(config.GITLAB_URL, config.GITLAB_AUTH_TOKEN);
+const gitlabApi = new GitlabApi(config.GITLAB_URL, config.GITLAB_AUTH_TOKEN, config.HTTP);
 const pubSub = new PubSub();
 const worker = new Worker(pubSub, config);
 
