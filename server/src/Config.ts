@@ -14,6 +14,7 @@ export const defaultConfig = {
 	HTTP_SERVER_PORT: 4000,
 	WEB_HOOK_TOKEN: '',
 	DRY_RUN: false,
+	HTTP_PROXY: ""
 };
 
 export const getConfig = (): Config => ({
