@@ -14,7 +14,7 @@ export const defaultConfig = {
 	HTTP_SERVER_PORT: 4000,
 	WEB_HOOK_TOKEN: '',
 	DRY_RUN: false,
-	HTTP_PROXY: ""
+	HTTP_PROXY: '',
 };
 
 export const getConfig = (): Config => ({
@@ -56,7 +56,7 @@ export const getConfig = (): Config => ({
 		.asPortNumber(),
 	WEB_HOOK_TOKEN: env.get('WEB_HOOK_TOKEN').default(defaultConfig.WEB_HOOK_TOKEN).asString(),
 	DRY_RUN: env.get('DRY_RUN').default(`${defaultConfig.DRY_RUN}`).asBoolStrict(),
-	HTTP_PROXY: env.get("HTTP_PROXY").default("").asString()
+	HTTP_PROXY: env.get('HTTP_PROXY').default('').asString(),
 });
 
 export type Config = typeof defaultConfig;
