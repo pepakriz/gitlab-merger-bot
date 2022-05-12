@@ -41,6 +41,26 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+route:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  labels: {}
+  # -- The hostname that should be used.
+  # If left empty, OpenShift will generate one for you with defaults.
+  host: "chart-example.local"
+  # -- Subpath of the route.
+  path: /
+  tls:
+    # If `true`, TLS is enabled for the Route
+    enabled: true
+    config:
+      # Insecure edge termination policy of the Route. Can be `None`, `Redirect`, or `Allow`
+      insecureEdgeTerminationPolicy: Redirect
+      # TLS termination of the route. Can be `edge`, `passthrough`, or `reencrypt`
+      termination: edge
+
 service:
   type: ClusterIP
   port: 4000

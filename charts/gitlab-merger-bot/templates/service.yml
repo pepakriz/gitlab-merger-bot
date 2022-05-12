@@ -1,4 +1,4 @@
-{{- if .Values.ingress.enabled }}
+{{- if or .Values.ingress.enabled .Values.route.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,10 +9,7 @@ metadata:
 {{ toYaml .Values.service.annotations | indent 4 }}
 {{- end }}
   labels:
-    app: {{ include "gitlab-merger-bot.name" . }}
-    chart: {{ include "gitlab-merger-bot.chart" . }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
+    {{- include "helm-chart.labels" . | nindent 4 }}
 {{- if .Values.service.labels }}
 {{ toYaml .Values.service.labels | indent 4 }}
 {{- end }}

@@ -32,6 +32,17 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
+Common labels
+*/}}
+{{- define "helm-chart.labels" -}}
+app: {{ include "gitlab-merger-bot.name" . }}
+chart: {{ include "gitlab-merger-bot.chart" . }}
+heritage: {{ .Release.Service }}
+release: {{ .Release.Name }}
+{{- end }}
+
+
+{{/*
 Allow the release namespace to be overridden for multi-namespace deployments in combined charts
 */}}
 {{- define "gitlab-merger-bot.namespace" -}}
