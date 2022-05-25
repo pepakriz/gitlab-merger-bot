@@ -1,0 +1,31 @@
+{{- if .Values.route.enabled }}
+{{- $fullName := include "gitlab-merger-bot.fullname" . -}}
+{{- $service := .Values.service -}}
+{{- $route := .Values.route -}}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ include "gitlab-merger-bot.namespace" . }}
+{{- if $route.annotations }}
+  annotations:
+{{ toYaml $route.annotations | indent 4 }}
+{{- end }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+{{- if $route.labels }}
+{{ toYaml $route.labels | indent 4 }}
+{{- end }}
+spec:
+  host: {{ $route.host }}
+  path: {{ $route.path }}
+  port:
+    targetPort: {{ $service.port }}
+  to:
+    kind: Service
+    name: {{ $fullName }}
+    weight: 100
+{{- if $route.tls.enabled }}
+  tls:
+    {{ toYaml $route.tls.config | nindent 4 }}
+{{- end}}

@@ -13,10 +13,7 @@ metadata:
 {{ toYaml .Values.ingress.annotations | indent 4 }}
 {{- end }}
   labels:
-    app: {{ include "gitlab-merger-bot.name" . }}
-    chart: {{ include "gitlab-merger-bot.chart" . }}
-    heritage: {{ .Release.Service }}
-    release: {{ .Release.Name }}
+    {{- include "helm-chart.labels" . | nindent 4 }}
 {{- if .Values.ingress.labels }}
 {{ toYaml .Values.ingress.labels | indent 4 }}
 {{- end }}
