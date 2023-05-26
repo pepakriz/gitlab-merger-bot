@@ -34,6 +34,10 @@ const worker = new Worker(pubSub, config);
 		),
 	);
 
+	if (config.SSL_VERIFY_IGNORE) {
+		process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+	}
+
 	const user = await gitlabApi.getMe();
 
 	console.log(`[bot] Hi, I'm ${user.name}. I'll accept merge request assigned to me.`);

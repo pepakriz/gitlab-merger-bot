@@ -21,11 +21,11 @@ jobs:
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.2.0
         env:
-          CR_TOKEN: "${{ secrets.CR_TOKEN }}"
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Publish to Registry
-        uses: elgohr/Publish-Docker-Github-Action@master
+        uses: elgohr/Publish-Docker-Github-Action@v4
         with:
-          name: pepakriz/gitlab-merger-bot
+          name: "${{ secrets.DOCKER_NAMESPACE }}/gitlab-merger-bot"
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
