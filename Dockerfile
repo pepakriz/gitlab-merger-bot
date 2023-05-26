@@ -1,4 +1,4 @@
-FROM node:12.16.1-alpine AS base
+FROM node:20-alpine3.17 AS base
 WORKDIR /app
 
 COPY ./package.json ./yarn.lock ./
@@ -41,16 +41,17 @@ RUN set -ex \
 	&& yarn run export
 
 
-FROM alpine:3.11
+FROM alpine:3.17
 WORKDIR /app
 CMD ["/app/server/gitlab-merger-bot"]
 ENV NODE_ENV=production
 
 RUN set -ex \
 	&& apk --no-cache --update add \
-		ca-certificates \
-		libstdc++ \
-		libgcc
+	ca-certificates \
+	libstdc++ \
+	libgcc && \
+	update-ca-certificates
 
 COPY --from=server-build /app/server/gitlab-merger-bot /app/server/
 COPY --from=dashboard-build /app/dashboard/out /app/dashboard/out/
