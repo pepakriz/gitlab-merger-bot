@@ -16,9 +16,9 @@ jobs:
         run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF:10})" >> $GITHUB_ENV
 
       - name: Publish to Registry
-        uses: elgohr/Publish-Docker-Github-Action@master
+        uses: elgohr/Publish-Docker-Github-Action@v4
         with:
-          name: pepakriz/gitlab-merger-bot
+          name: "${{ secrets.DOCKER_NAMESPACE }}/gitlab-merger-bot"
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           tag_semver: true
