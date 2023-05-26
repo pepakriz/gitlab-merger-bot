@@ -93,7 +93,7 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `SQUASH_MERGE_REQUEST`         | `true`               | It'll squash commits on merge                              |
 | `AUTORUN_MANUAL_BLOCKING_JOBS` | `true`               | It'll autorun manual blocking jobs before merge            |
 | `SKIP_SQUASHING_LABEL`         | `bot:skip-squash`    | It'll skip squash when MR contains this label              |
-| `HI_PRIORITY_LABEL`            | `bot:high-priority`  | It'll put MR with this label to the beginning of the queue |
+| `HIGH_PRIORITY_LABEL`          | `bot:high-priority`  | It'll put MR with this label to the beginning of the queue |
 | `SENTRY_DSN`                   | ``                   | It'll enable Sentry monitoring                             |
 | `HTTP_SERVER_ENABLE`           | `false`              | It'll enable experimental API and dashboard support        |
 | `HTTP_SERVER_PORT`             | `4000`               | It'll use different http server port                       |
