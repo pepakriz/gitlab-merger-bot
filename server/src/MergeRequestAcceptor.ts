@@ -357,16 +357,29 @@ export const acceptMergeRequest = async (
 		};
 	}
 
+	type BodyStructure = {
+		should_remove_source_branch: boolean;
+		sha: string;
+		squash: boolean;
+		squash_commit_message?: string;
+		merge_commit_message?: string;
+	};
+
+	const requestBody: BodyStructure = {
+		should_remove_source_branch: config.REMOVE_BRANCH_AFTER_MERGE,
+		sha: mergeRequestInfo.diff_refs.head_sha,
+		squash: useSquash,
+	};
+
+	if (!config.PREFER_GITLAB_TEMPLATE) {
+		requestBody.squash_commit_message = `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`;
+		requestBody.merge_commit_message = `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`;
+	}
+
 	const response = await gitlabApi.sendRawRequest(
 		`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`,
 		RequestMethod.Put,
-		{
-			should_remove_source_branch: config.REMOVE_BRANCH_AFTER_MERGE,
-			sha: mergeRequestInfo.diff_refs.head_sha,
-			squash: useSquash,
-			squash_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
-			merge_commit_message: `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`,
-		},
+		requestBody,
 	);
 
 	if (response.status === 405 || response.status === 406) {
