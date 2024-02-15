@@ -7,6 +7,7 @@ export const defaultConfig = {
 	MR_CHECK_INTERVAL: 20,
 	REMOVE_BRANCH_AFTER_MERGE: true,
 	SQUASH_MERGE_REQUEST: true,
+	PREFER_GITLAB_TEMPLATE: false,
 	AUTORUN_MANUAL_BLOCKING_JOBS: true,
 	SKIP_SQUASHING_LABEL: 'bot:skip-squash',
 	HIGH_PRIORITY_LABEL: 'bot:high-priority',
@@ -33,6 +34,10 @@ export const getConfig = (): Config => ({
 	SQUASH_MERGE_REQUEST: env
 		.get('SQUASH_MERGE_REQUEST')
 		.default(`${defaultConfig.SQUASH_MERGE_REQUEST}`)
+		.asBoolStrict(),
+	PREFER_GITLAB_TEMPLATE: env
+		.get('PREFER_GITLAB_TEMPLATE')
+		.default(`${defaultConfig.PREFER_GITLAB_TEMPLATE}`)
 		.asBoolStrict(),
 	AUTORUN_MANUAL_BLOCKING_JOBS: env
 		.get('AUTORUN_MANUAL_BLOCKING_JOBS')
