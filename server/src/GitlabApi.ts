@@ -12,11 +12,21 @@ export interface User {
 	web_url: string;
 }
 
-export enum MergeStatus {
-	CanBeMerged = 'can_be_merged',
-	Unchecked = 'unchecked',
+export enum DetailedMergeStatus {
+	BlockedStatus = 'blocked_status',
 	Checking = 'checking',
-	Merged = 'merged',
+	Unchecked = 'unchecked',
+	CiMustPass = 'ci_must_pass',
+	CiStillRunning = 'ci_still_running',
+	DiscussionsNotResolved = 'discussions_not_resolved',
+	DraftStatus = 'draft_status',
+	ExternalStatusChecks = 'external_status_checks',
+	Mergeable = 'mergeable',
+	NotApproved = 'not_approved',
+	NotOpen = 'not_open',
+	JiraAssociationMissing = 'jira_association_missing',
+	NeedsRebase = 'needs_rebase',
+	Conflict = 'conflict',
 }
 
 export enum MergeState {
@@ -40,18 +50,16 @@ export interface MergeRequest {
 	assignee: MergeRequestAssignee | null;
 	assignees: MergeRequestAssignee[];
 	project_id: number;
-	merge_status: MergeStatus;
+	detailed_merge_status: DetailedMergeStatus;
 	web_url: string;
 	source_branch: string;
 	target_branch: string;
 	source_project_id: number;
 	target_project_id: number;
-	work_in_progress: boolean;
 	state: MergeState;
 	force_remove_source_branch: boolean;
 	labels: string[];
 	squash: boolean;
-	blocking_discussions_resolved: boolean;
 	has_conflicts: boolean;
 	references: {
 		full: string;
