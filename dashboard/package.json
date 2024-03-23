@@ -6,7 +6,6 @@
 		"start:dev": "next --turbo",
 		"start:local": "API_URL=http://127.0.0.1:4000/graphql WS_URL=ws://127.0.0.1:4000/graphql next --turbo",
 		"build": "next build",
-		"export": "next export",
 		"start": "next start",
 		"generate": "graphql-codegen",
 		"format": "prettier --write \"**/*.{js,json,ts,tsx}\"",

@@ -37,8 +37,7 @@ COPY ./dashboard ./
 RUN set -ex \
 	# because it needs src
 	&& yarn run generate \
-	&& yarn run build \
-	&& yarn run export
+	&& yarn run build
 
 
 FROM alpine:3.19.1
