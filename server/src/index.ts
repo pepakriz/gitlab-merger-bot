@@ -3,7 +3,7 @@ import * as env from 'env-var';
 import { GitlabApi } from './GitlabApi';
 import { Worker } from './Worker';
 import { getConfig } from './Config';
-import { PubSub } from 'apollo-server';
+import { PubSub } from 'graphql-subscriptions';
 import { MergeRequestCheckerLoop } from './MergeRequestCheckerLoop';
 import { WebHookServer } from './WebHookServer';
 

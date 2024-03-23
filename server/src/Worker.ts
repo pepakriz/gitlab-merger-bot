@@ -1,5 +1,5 @@
 import { Queue } from './Queue';
-import { PubSub } from 'apollo-server';
+import { PubSub } from 'graphql-subscriptions';
 import { AppEvent } from './Types';
 import { Config } from './Config';
 import { Job, JobFunction } from './Job';

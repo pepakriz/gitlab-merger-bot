@@ -1,7 +1,6 @@
 import { NextPage, NextPageContext } from 'next';
 import React from 'react';
 
-import Head from 'next/head';
 import {
 	ApolloProvider,
 	ApolloClient,
@@ -12,7 +11,6 @@ import {
 import { getMainDefinition } from '@apollo/client/utilities';
 import { HttpLink } from '@apollo/client/link/http';
 import { WebSocketLink } from '@apollo/client/link/ws';
-import fetch from 'isomorphic-unfetch';
 
 type TApolloClient = ApolloClient<NormalizedCacheObject>;
 
@@ -66,7 +64,6 @@ export function withApollo(PageComponent: NextPage, { ssr = true } = {}) {
 					} catch (error) {
 						console.error('Error while running `getDataFromTree`', error);
 					}
-					Head.rewind();
 				}
 			}
 
@@ -106,7 +103,6 @@ function createApolloClient(initialState = {}) {
 	const httpLink = new HttpLink({
 		uri: apiUrl,
 		credentials: 'same-origin',
-		fetch,
 	});
 
 	if (!ssrMode) {

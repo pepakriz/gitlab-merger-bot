@@ -1,42 +1,33 @@
 import React from 'react';
-import Document, { Head, Main, NextScript } from 'next/document';
-import { ServerStyleSheets } from '@material-ui/core/styles';
+import { Head, Main, Html, NextScript, DocumentProps, DocumentContext } from 'next/document';
+import {
+	DocumentHeadTags,
+	DocumentHeadTagsProps,
+	documentGetInitialProps,
+} from '@mui/material-nextjs/v14-pagesRouter';
 import theme from '../theme';
 
-export default class AppDocument extends Document {
-	render() {
-		return (
-			<html lang='en'>
-				<Head>
-					{/* PWA primary color */}
-					<meta name='theme-color' content={theme.palette.primary.main} />
-					<link
-						rel='stylesheet'
-						href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap'
-					/>
-				</Head>
-				<body>
-					<Main />
-					<NextScript />
-				</body>
-			</html>
-		);
-	}
+export default function AppDocument(props: DocumentProps & DocumentHeadTagsProps) {
+	return (
+		<Html lang='en'>
+			<Head>
+				{/* PWA primary color */}
+				<meta name='theme-color' content={theme.palette.primary.main} />
+				<link
+					rel='stylesheet'
+					href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap'
+				/>
+				<DocumentHeadTags {...props} />
+			</Head>
+			<body>
+				<Main />
+				<NextScript />
+			</body>
+		</Html>
+	);
 }
 
-AppDocument.getInitialProps = async (ctx) => {
-	const sheets = new ServerStyleSheets();
-	const originalRenderPage = ctx.renderPage;
-
-	ctx.renderPage = () =>
-		originalRenderPage({
-			enhanceApp: (App) => (props) => sheets.collect(<App {...props} />),
-		});
-
-	const initialProps = await Document.getInitialProps(ctx);
-
-	return {
-		...initialProps,
-		styles: [...React.Children.toArray(initialProps.styles), sheets.getStyleElement()],
-	};
+AppDocument.getInitialProps = async (ctx: DocumentContext) => {
+	const finalProps = await documentGetInitialProps(ctx);
+	return finalProps;
 };

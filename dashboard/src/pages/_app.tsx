@@ -1,35 +1,27 @@
 import React from 'react';
-import App from 'next/app';
+import { AppProps } from 'next/app';
 import Head from 'next/head';
-import { ThemeProvider } from '@material-ui/core/styles';
-import CssBaseline from '@material-ui/core/CssBaseline';
+import { AppCacheProvider } from '@mui/material-nextjs/v14-pagesRouter';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import theme from '../theme';
 
-export default class MyApp extends App {
-	componentDidMount() {
-		const jssStyles = document.querySelector('#jss-server-side');
-		if (jssStyles) {
-			jssStyles.parentElement?.removeChild(jssStyles);
-		}
-	}
+export default function MyApp(props: AppProps) {
+	const { Component, pageProps } = props;
 
-	render() {
-		const { Component, pageProps } = this.props;
-
-		return (
-			<React.Fragment>
-				<Head>
-					<title>GitLab Merger Bot</title>
-					<meta
-						name='viewport'
-						content='minimum-scale=1, initial-scale=1, width=device-width'
-					/>
-				</Head>
-				<ThemeProvider theme={theme}>
-					<CssBaseline />
-					<Component {...pageProps} />
-				</ThemeProvider>
-			</React.Fragment>
-		);
-	}
+	return (
+		<AppCacheProvider {...props}>
+			<Head>
+				<title>GitLab Merger Bot</title>
+				<meta
+					name='viewport'
+					content='minimum-scale=1, initial-scale=1, width=device-width'
+				/>
+			</Head>
+			<ThemeProvider theme={theme}>
+				<CssBaseline />
+				<Component {...pageProps} />
+			</ThemeProvider>
+		</AppCacheProvider>
+	);
 }

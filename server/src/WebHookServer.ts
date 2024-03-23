@@ -1,20 +1,24 @@
 import express from 'express';
 import { v4 as uuid } from 'uuid';
 import path from 'path';
-import serveStatic from 'serve-static';
 import bodyParser from 'body-parser';
 import { GitlabApi, MergeState, User } from './GitlabApi';
 import { Worker } from './Worker';
 import { prepareMergeRequestForMerge } from './MergeRequestReceiver';
-import { ApolloServer, gql } from 'apollo-server-express';
-import { PubSub } from 'apollo-server';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
+import { PubSub } from 'graphql-subscriptions';
 import http from 'http';
 import { AppEvent } from './Types';
 import { Resolvers } from './generated/graphqlgen';
 import { Config } from './Config';
+import { loadSchema } from '@graphql-tools/load';
+import { GraphQLFileLoader } from '@graphql-tools/graphql-file-loader';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { addResolversToSchema } from '@graphql-tools/schema';
 
-// @ts-ignore
-import typeDefs from '../../schema.graphql';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 
 interface MergeRequestAssignee {
@@ -117,7 +121,11 @@ export class WebHookServer {
 		});
 	}
 
-	public start(): Promise<void> {
+	public async start(): Promise<void> {
+		const loadedSchema = await loadSchema('../schema.graphql', {
+			loaders: [new GraphQLFileLoader()],
+		});
+
 		return new Promise((resolve) => {
 			const app = express();
 			this.httpServer = http.createServer(app);
@@ -128,15 +136,16 @@ export class WebHookServer {
 					return;
 				}
 
-				res.sendStatus(502);
+				res.status(502);
 				res.send('Failed');
 			});
 
 			app.use(
-				serveStatic(path.join(process.cwd(), 'dashboard/out'), {
+				express.static(path.join(process.cwd(), 'dashboard/out'), {
 					index: 'index.html',
 				}),
 			);
+
 			app.use(bodyParser.json());
 			app.post('/', async (req, res) => {
 				const token = req.headers['x-gitlab-token'];
@@ -201,7 +210,7 @@ export class WebHookServer {
 							return this.pubSub.asyncIterator([
 								AppEvent.QUEUE_CHANGED,
 								listenerName,
-							]);
+							]) as unknown as AsyncIterable<any>;
 						},
 					},
 				},
@@ -220,23 +229,44 @@ export class WebHookServer {
 				},
 			};
 
-			const server = new ApolloServer({
-				typeDefs,
-				resolvers,
-				subscriptions: {
-					path: '/graphql',
-				},
+			const wsServer = new WebSocketServer({
+				server: this.httpServer,
+				path: '/graphql',
 			});
-			server.applyMiddleware({ app, path: '/graphql' });
-			server.installSubscriptionHandlers(this.httpServer);
 
-			this.httpServer.listen(this.config.HTTP_SERVER_PORT, () => {
-				console.log(
-					`[api] API server is listening on port ${this.config.HTTP_SERVER_PORT}`,
-				);
-				this.started = true;
-				return resolve();
+			const schema = addResolversToSchema({ schema: loadedSchema, resolvers });
+			const serverCleanup = useServer({ schema }, wsServer);
+
+			const server = new ApolloServer({
+				schema,
+				plugins: [
+					ApolloServerPluginDrainHttpServer({ httpServer: this.httpServer }),
+					{
+						async serverWillStart() {
+							return {
+								async drainServer() {
+									await serverCleanup.dispose();
+								},
+							};
+						},
+					},
+				],
 			});
+
+			const httpServer = this.httpServer;
+
+			(async () => {
+				await server.start();
+				app.use('/graphql', expressMiddleware(server));
+
+				httpServer.listen(this.config.HTTP_SERVER_PORT, () => {
+					console.log(
+						`[api] API server is listening on port ${this.config.HTTP_SERVER_PORT}`,
+					);
+					this.started = true;
+					return resolve();
+				});
+			})();
 		});
 	}
 }

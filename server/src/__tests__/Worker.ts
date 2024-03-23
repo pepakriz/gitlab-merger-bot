@@ -1,6 +1,6 @@
 import { Worker } from '../Worker';
 import { defaultConfig } from '../Config';
-import { PubSub } from 'apollo-server';
+import { PubSub } from 'graphql-subscriptions';
 import { JobInfo, JobPriority } from '../generated/graphqlgen';
 
 const jobInfoMock: JobInfo = {
