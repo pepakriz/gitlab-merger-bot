@@ -13,6 +13,8 @@ generates:
     plugins:
       - typescript
       - typescript-resolvers
+      - typescript-operations
+      - "codegen/typedefsCodegen.js"
     hooks:
       afterOneFileWrite:
         - prettier --write
