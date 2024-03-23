@@ -1,5 +1,7 @@
 import { NextPage, NextPageContext } from 'next';
 import React from 'react';
+import { createClient } from 'graphql-ws';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 
 import {
 	ApolloProvider,
@@ -113,12 +115,11 @@ function createApolloClient(initialState = {}) {
 			}/graphql`;
 		}
 
-		const wsLink = new WebSocketLink({
-			uri: wsUrl,
-			options: {
-				reconnect: true,
-			},
-		});
+		const wsLink = new GraphQLWsLink(
+			createClient({
+				url: wsUrl,
+			}),
+		);
 
 		const link = split(
 			// split based on operation type
