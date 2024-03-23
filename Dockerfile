@@ -18,6 +18,7 @@ FROM base AS server-build
 WORKDIR /app/server
 
 COPY ./server/codegen.yml ./
+COPY ./server/codegen ./codegen/
 
 RUN set -ex \
 	&& yarn run generate

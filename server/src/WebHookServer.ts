@@ -10,14 +10,12 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { PubSub } from 'graphql-subscriptions';
 import http from 'http';
 import { AppEvent } from './Types';
-import { Resolvers } from './generated/graphqlgen';
+import { Resolvers, typeDefs } from './generated/graphqlgen';
 import { Config } from './Config';
-import { loadSchema } from '@graphql-tools/load';
-import { GraphQLFileLoader } from '@graphql-tools/graphql-file-loader';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-import { addResolversToSchema } from '@graphql-tools/schema';
+import { makeExecutableSchema } from '@graphql-tools/schema';
 
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 
@@ -121,11 +119,7 @@ export class WebHookServer {
 		});
 	}
 
-	public async start(): Promise<void> {
-		const loadedSchema = await loadSchema('../schema.graphql', {
-			loaders: [new GraphQLFileLoader()],
-		});
-
+	public start(): Promise<void> {
 		return new Promise((resolve) => {
 			const app = express();
 			this.httpServer = http.createServer(app);
@@ -234,7 +228,7 @@ export class WebHookServer {
 				path: '/graphql',
 			});
 
-			const schema = addResolversToSchema({ schema: loadedSchema, resolvers });
+			const schema = makeExecutableSchema({ typeDefs: typeDefs, resolvers });
 			const serverCleanup = useServer({ schema }, wsServer);
 
 			const server = new ApolloServer({
