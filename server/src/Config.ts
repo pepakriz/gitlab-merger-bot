@@ -19,7 +19,11 @@ export const defaultConfig = {
 };
 
 export const getConfig = (): Config => ({
-	GITLAB_URL: env.get('GITLAB_URL').default(defaultConfig.GITLAB_URL).asUrlString(),
+	GITLAB_URL: env
+		.get('GITLAB_URL')
+		.default(defaultConfig.GITLAB_URL)
+		.asUrlString()
+		.replace(/\/$/g, ''),
 	GITLAB_AUTH_TOKEN: env.get('GITLAB_AUTH_TOKEN').required().asString(),
 	CI_CHECK_INTERVAL:
 		env.get('CI_CHECK_INTERVAL').default(`${defaultConfig.CI_CHECK_INTERVAL}`).asIntPositive() *
