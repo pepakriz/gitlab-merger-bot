@@ -1,11 +1,11 @@
 import {
+	DetailedMergeStatus,
 	GitlabApi,
 	MergeRequest,
 	MergeRequestApprovals,
 	MergeRequestInfo,
 	MergeRequestPipeline,
 	MergeState,
-	MergeStatus,
 	PipelineJob,
 	PipelineJobStatus,
 	PipelineStatus,
@@ -245,7 +245,7 @@ export const acceptMergeRequest = async (
 		throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
 	}
 
-	if (!mergeRequestInfo.blocking_discussions_resolved) {
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.DiscussionsNotResolved) {
 		return {
 			kind: AcceptMergeRequestResultKind.UnresolvedDiscussion,
 			mergeRequestInfo,
@@ -269,7 +269,7 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (mergeRequestInfo.merge_status === MergeStatus.Checking) {
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Checking) {
 		return {
 			kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
 			mergeRequestInfo,
@@ -277,7 +277,7 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (mergeRequestInfo.has_conflicts) {
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Conflict) {
 		return {
 			kind: AcceptMergeRequestResultKind.HasConflict,
 			mergeRequestInfo,
@@ -285,7 +285,7 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (mergeRequestInfo.work_in_progress) {
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.DraftStatus) {
 		return {
 			kind: AcceptMergeRequestResultKind.WorkInProgress,
 			mergeRequestInfo,
@@ -385,9 +385,9 @@ export const acceptMergeRequest = async (
 	if (response.status === 405 || response.status === 406) {
 		// GitLab 405 is a mixed state and can be a temporary error
 		// as long as all flags and status indicate that we can merge, retry
-		if (mergeRequestInfo.merge_status === MergeStatus.CanBeMerged) {
+		if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Mergeable) {
 			console.log(
-				`[MR][${mergeRequestInfo.iid}] ${response.status} - cannot be merged but merge status is: ${mergeRequestInfo.merge_status}`,
+				`[MR][${mergeRequestInfo.iid}] ${response.status} - cannot be merged but merge status is: ${mergeRequestInfo.detailed_merge_status}`,
 			);
 
 			return {
@@ -619,11 +619,11 @@ export const runAcceptingMergeRequest = async (
 	}
 
 	if (
-		mergeRequestInfo.merge_status !== MergeStatus.CanBeMerged &&
-		mergeRequestInfo.merge_status !== MergeStatus.Unchecked
+		mergeRequestInfo.detailed_merge_status !== DetailedMergeStatus.Mergeable &&
+		mergeRequestInfo.detailed_merge_status !== DetailedMergeStatus.Unchecked
 	) {
 		console.log(
-			`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge status is ${mergeRequestInfo.merge_status}`,
+			`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge status is ${mergeRequestInfo.detailed_merge_status}`,
 		);
 		return {
 			kind: AcceptMergeRequestResultKind.CanNotBeMerged,

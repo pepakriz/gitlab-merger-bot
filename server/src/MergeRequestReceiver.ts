@@ -1,4 +1,4 @@
-import { GitlabApi, MergeRequest, MergeStatus, User } from './GitlabApi';
+import { DetailedMergeStatus, GitlabApi, MergeRequest, User } from './GitlabApi';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { sendNote } from './SendNote';
 import {
@@ -50,28 +50,7 @@ export const prepareMergeRequestForMerge = async (
 		return;
 	}
 
-	if (
-		mergeRequest.merge_status !== MergeStatus.CanBeMerged &&
-		mergeRequest.merge_status !== MergeStatus.Checking &&
-		mergeRequest.merge_status !== MergeStatus.Unchecked
-	) {
-		console.log(
-			`[loop][MR][${mergeRequest.iid}] Merge request can't be merged. Merge status is ${mergeRequest.merge_status}, assigning back`,
-		);
-
-		await Promise.all([
-			assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
-			sendNote(
-				gitlabApi,
-				mergeRequest,
-				`Merge request can't be merged. Probably it needs rebase to target branch.`,
-			),
-		]);
-
-		return;
-	}
-
-	if (mergeRequest.work_in_progress) {
+	if (mergeRequest.detailed_merge_status === DetailedMergeStatus.DraftStatus) {
 		console.log(`[loop][MR][${mergeRequest.iid}] Merge request is a draft, assigning back`);
 
 		await Promise.all([
@@ -86,7 +65,7 @@ export const prepareMergeRequestForMerge = async (
 		return;
 	}
 
-	if (!mergeRequest.blocking_discussions_resolved) {
+	if (mergeRequest.detailed_merge_status === DetailedMergeStatus.DiscussionsNotResolved) {
 		console.log(
 			`[loop][MR][${mergeRequest.iid}] Merge request has unresolved discussion, assigning back`,
 		);
@@ -103,7 +82,7 @@ export const prepareMergeRequestForMerge = async (
 		return;
 	}
 
-	if (mergeRequest.has_conflicts) {
+	if (mergeRequest.detailed_merge_status === DetailedMergeStatus.Conflict) {
 		console.log(`[loop][MR][${mergeRequest.iid}] MR has conflict`);
 
 		await Promise.all([
