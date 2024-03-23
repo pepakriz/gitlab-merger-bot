@@ -136,7 +136,7 @@ export enum RequestMethod {
 export class GitlabApi {
 	private readonly gitlabUrl: string;
 	private readonly authToken: string;
-	private readonly httpProxy: HttpsProxyAgent | undefined;
+	private readonly httpProxy: HttpsProxyAgent<string> | undefined;
 
 	constructor(gitlabUrl: string, authToken: string, httpProxy: string | undefined) {
 		this.gitlabUrl = gitlabUrl;
@@ -283,7 +283,7 @@ export class GitlabApi {
 		await this.validateResponseStatus(response);
 
 		const data = await response.json();
-		if (typeof data !== 'object' && data.id === undefined) {
+		if (typeof data !== 'object' || data === null || !('id' in data) || data.id === undefined) {
 			console.error('response', data);
 			throw new Error('Invalid response');
 		}

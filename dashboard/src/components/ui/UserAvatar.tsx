@@ -3,7 +3,7 @@ import React from 'react';
 import { useQuery } from '@apollo/client';
 import { AvatarQuery, AvatarQueryVariables } from '../../types';
 import gql from 'graphql-tag';
-import Avatar from '@material-ui/core/Avatar';
+import Avatar from '@mui/material/Avatar';
 
 interface Props {
 	userId: number;

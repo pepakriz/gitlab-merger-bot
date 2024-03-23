@@ -1,7 +1,7 @@
 import React from 'react';
 import { withApollo } from '../lib/apollo';
-import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 import Layout from '../components/layout';
 import { useMutation, useSubscription } from '@apollo/client';
 import gql from 'graphql-tag';
@@ -12,20 +12,19 @@ import {
 	UnassignMutation,
 	UnassignMutationVariables,
 } from '../types';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableContainer from '@material-ui/core/TableContainer';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import Paper from '@material-ui/core/Paper';
-import Button from '@material-ui/core/Button';
-import ButtonGroup from '@material-ui/core/ButtonGroup';
-import Toolbar from '@material-ui/core/Toolbar';
-import Icon from '@material-ui/icons/Send';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
+import Toolbar from '@mui/material/Toolbar';
+import Icon from '@mui/icons-material/Send';
 import { UserAvatar } from '../components/ui/UserAvatar';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
+import CircularProgress from '@mui/material/CircularProgress';
 
 const Row = (props: GetQueuesSubscriptionJobFragment) => {
 	const [unassign, { loading }] = useMutation<UnassignMutation, UnassignMutationVariables>(gql`

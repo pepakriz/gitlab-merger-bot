@@ -1,22 +1,18 @@
 import React from 'react';
 
-import CircularProgress from '@material-ui/core/CircularProgress';
-import Backdrop from '@material-ui/core/Backdrop';
-import { makeStyles, createStyles, Theme } from '@material-ui/core';
-
-const useStyles = makeStyles((theme: Theme) =>
-	createStyles({
-		backdrop: {
-			zIndex: theme.zIndex.appBar - 1,
-			color: '#fff',
-		},
-	}),
-);
+import CircularProgress from '@mui/material/CircularProgress';
+import Backdrop from '@mui/material/Backdrop';
+import { Theme } from '@mui/material';
 
 const OverlayLoading = () => {
-	const classes = useStyles();
 	return (
-		<Backdrop open className={classes.backdrop}>
+		<Backdrop
+			open
+			sx={{
+				zIndex: (theme: Theme) => theme.zIndex.appBar - 1,
+				color: '#fff',
+			}}
+		>
 			<CircularProgress size={32} color={'inherit'} />
 		</Backdrop>
 	);
