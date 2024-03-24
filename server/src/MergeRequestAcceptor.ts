@@ -124,7 +124,7 @@ interface WorkInProgressResponse extends Response {
 interface PipelineInProgressResponse extends Response {
 	kind: AcceptMergeRequestResultKind.PipelineInProgress;
 	mergeRequestInfo: MergeRequestInfo;
-	pipeline: MergeRequestPipeline;
+	pipeline: MergeRequestPipeline | null;
 }
 
 export type AcceptMergeRequestResult =
@@ -304,8 +304,9 @@ export const acceptMergeRequest = async (
 	}
 
 	if (
-		mergeRequestInfo.head_pipeline !== null &&
-		startingOrInProgressPipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)
+		[DetailedMergeStatus.CiMustPass, DetailedMergeStatus.CiStillRunning].includes(
+			mergeRequestInfo.detailed_merge_status,
+		)
 	) {
 		return {
 			kind: AcceptMergeRequestResultKind.PipelineInProgress,
@@ -602,7 +603,7 @@ export const runAcceptingMergeRequest = async (
 		}
 
 		console.log(
-			`[MR][${mergeRequestInfo.iid}] Waiting for CI. Current status: ${mergeResponse.pipeline.status}`,
+			`[MR][${mergeRequestInfo.iid}] Waiting for CI. Merge status: ${mergeRequestInfo.detailed_merge_status}.${mergeResponse.pipeline !== null ? ` Current status: ${mergeResponse.pipeline.status}` : ''}`,
 		);
 		job.updateStatus(JobStatus.WAITING_FOR_CI);
 		return;
