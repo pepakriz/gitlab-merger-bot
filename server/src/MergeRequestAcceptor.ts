@@ -315,18 +315,6 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (
-		mergeRequestInfo.pipeline !== null &&
-		startingOrInProgressPipelineStatuses.includes(mergeRequestInfo.pipeline.status)
-	) {
-		return {
-			kind: AcceptMergeRequestResultKind.PipelineInProgress,
-			mergeRequestInfo,
-			user,
-			pipeline: mergeRequestInfo.pipeline,
-		};
-	}
-
 	// the latest pipeline is incomplete / has failed
 	if (
 		mergeRequestInfo.head_pipeline !== null &&
@@ -446,7 +434,7 @@ const resolveCurrentPipeline = async (
 	user: User,
 	mergeRequestInfo: MergeRequestInfo,
 ): Promise<MergeRequestPipeline | null | false> => {
-	let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
+	let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.head_pipeline;
 
 	if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
 		const pipelines = await gitlabApi.getMergeRequestPipelines(
@@ -460,7 +448,7 @@ const resolveCurrentPipeline = async (
 
 			if (currentPipelineCandidate === undefined) {
 				const message =
-					mergeRequestInfo.pipeline === null
+					mergeRequestInfo.head_pipeline === null
 						? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
 						: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
 				console.log(message);
@@ -638,7 +626,7 @@ export const runAcceptingMergeRequest = async (
 			kind: AcceptMergeRequestResultKind.InvalidPipeline,
 			mergeRequestInfo,
 			user,
-			pipeline: mergeRequestInfo.pipeline,
+			pipeline: mergeRequestInfo.head_pipeline,
 		};
 	}
 

@@ -117,7 +117,6 @@ export interface MergeRequestInfo extends MergeRequest {
 		base_sha: string;
 		head_sha: string;
 	};
-	pipeline: MergeRequestPipeline | null;
 	head_pipeline: MergeRequestPipeline | null;
 	diverged_commits_count: number;
 	rebase_in_progress: boolean;

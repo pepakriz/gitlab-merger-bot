@@ -5,24 +5,24 @@ export const tryCancelPipeline = async (
 	mergeRequestInfo: MergeRequestInfo,
 	user: User,
 ): Promise<void> => {
-	if (mergeRequestInfo.pipeline === null) {
+	if (mergeRequestInfo.head_pipeline === null) {
 		return;
 	}
 
 	if (
-		mergeRequestInfo.pipeline.status !== PipelineStatus.Running &&
-		mergeRequestInfo.pipeline.status !== PipelineStatus.Pending
+		mergeRequestInfo.head_pipeline.status !== PipelineStatus.Running &&
+		mergeRequestInfo.head_pipeline.status !== PipelineStatus.Pending
 	) {
 		return;
 	}
 
 	const mergeRequestPipeline = await gitlabApi.getPipeline(
 		mergeRequestInfo.project_id,
-		mergeRequestInfo.pipeline.id,
+		mergeRequestInfo.head_pipeline.id,
 	);
 	if (mergeRequestPipeline.user.id !== user.id) {
 		return;
 	}
 
-	await gitlabApi.cancelPipeline(mergeRequestInfo.project_id, mergeRequestInfo.pipeline.id);
+	await gitlabApi.cancelPipeline(mergeRequestInfo.project_id, mergeRequestInfo.head_pipeline.id);
 };
