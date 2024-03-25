@@ -1,4 +1,5 @@
-FROM node:20.11.1-alpine AS base
+# syntax=docker/dockerfile:1
+FROM --platform=$BUILDPLATFORM node:20.11.1-alpine AS base
 WORKDIR /app
 
 COPY ./package.json ./yarn.lock ./
@@ -14,7 +15,7 @@ RUN set -ex \
 COPY ./schema.graphql ./
 
 
-FROM base AS server-build
+FROM --platform=$BUILDPLATFORM base AS server-build
 WORKDIR /app/server
 
 COPY ./server/codegen.yml ./
@@ -30,7 +31,7 @@ RUN set -ex \
 	&& yarn run build-bin
 
 
-FROM base AS dashboard-build
+FROM --platform=$BUILDPLATFORM base AS dashboard-build
 WORKDIR /app/dashboard
 
 COPY ./dashboard ./
@@ -41,7 +42,7 @@ RUN set -ex \
 	&& yarn run build
 
 
-FROM alpine:3.19.1
+FROM --platform=$BUILDPLATFORM alpine:3.19.1
 WORKDIR /app
 CMD ["/app/server/gitlab-merger-bot"]
 ENV NODE_ENV=production

@@ -7,7 +7,7 @@
 		"start": "node lib",
 		"generate": "graphql-codegen",
 		"build": "cross-env TS_NODE_PROJECT=\\\"tsconfig.webpack-config.json\\\" NODE_ENV=production esbuild src/index.ts --bundle --platform=node --outfile=lib/index.js",
-		"build-bin": "pkg -t node20-alpine-x64 lib/index.js --output ./gitlab-merger-bot",
+		"build-bin": "pkg -t node20-alpine-$(if [ \"$BUILDPLATFORM\" = \"linux/arm64\" ]; then echo \"arm64\"; else echo \"x64\"; fi) lib/index.js --output ./gitlab-merger-bot",
 		"format": "prettier --write \"**/*.{js,json,ts,tsx}\"",
 		"check": "yarn run check:types && yarn run check:tests",
 		"check:cs": "prettier --check \"**/*.{js,json,ts,tsx}\"",
