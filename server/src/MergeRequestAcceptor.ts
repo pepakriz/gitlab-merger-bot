@@ -494,10 +494,6 @@ export const runAcceptingMergeRequest = async (
 		await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 		await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
 		job.updateStatus(JobStatus.REBASING);
-		job.updateState((state) => ({
-			...state,
-			checkManualJobs: true,
-		}));
 		return;
 	}
 
@@ -513,50 +509,47 @@ export const runAcceptingMergeRequest = async (
 		return;
 	}
 
-	if (job.state.checkManualJobs) {
-		job.updateState((state) => ({
-			...state,
-			checkManualJobs: false,
-		}));
-		const currentPipeline = mergeRequestInfo.head_pipeline;
-		if (currentPipeline !== null) {
-			const jobs = uniqueNamedJobsByDate(
-				await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
-			);
+	const currentPipeline = mergeRequestInfo.head_pipeline;
 
-			const manualJobsToRun = jobs.filter(
-				(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
-			);
-			const canceledJobsToRun = jobs.filter(
-				(job) => PipelineJobStatus.Canceled === job.status && !job.allow_failure,
-			);
+	if (
+		currentPipeline !== null &&
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiMustPass &&
+		[PipelineStatus.Manual, PipelineStatus.Canceled].includes(currentPipeline.status)
+	) {
+		const jobs = uniqueNamedJobsByDate(
+			await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
+		);
 
-			if (manualJobsToRun.length > 0 || canceledJobsToRun.length > 0) {
-				if (!config.AUTORUN_MANUAL_BLOCKING_JOBS) {
-					return {
-						kind: AcceptMergeRequestResultKind.WaitingPipeline,
-						mergeRequestInfo,
-						user,
-						pipeline: currentPipeline,
-					};
-				}
+		const manualJobsToRun = jobs.filter(
+			(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
+		);
+		const canceledJobsToRun = jobs.filter(
+			(job) => PipelineJobStatus.Canceled === job.status && !job.allow_failure,
+		);
 
-				console.log(
-					`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
-				);
-				job.updateStatus(JobStatus.WAITING_FOR_CI);
-				await Promise.all(
-					manualJobsToRun.map((job) =>
-						gitlabApi.runJob(mergeRequestInfo.project_id, job.id),
-					),
-				);
-				await Promise.all(
-					canceledJobsToRun.map((job) =>
-						gitlabApi.retryJob(mergeRequestInfo.project_id, job.id),
-					),
-				);
-				return;
+		if (manualJobsToRun.length > 0 || canceledJobsToRun.length > 0) {
+			if (!config.AUTORUN_MANUAL_BLOCKING_JOBS) {
+				return {
+					kind: AcceptMergeRequestResultKind.WaitingPipeline,
+					mergeRequestInfo,
+					user,
+					pipeline: currentPipeline,
+				};
 			}
+
+			console.log(
+				`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
+			);
+			job.updateStatus(JobStatus.WAITING_FOR_CI);
+			await Promise.all(
+				manualJobsToRun.map((job) => gitlabApi.runJob(mergeRequestInfo.project_id, job.id)),
+			);
+			await Promise.all(
+				canceledJobsToRun.map((job) =>
+					gitlabApi.retryJob(mergeRequestInfo.project_id, job.id),
+				),
+			);
+			return;
 		}
 	}
 
@@ -589,7 +582,6 @@ export const runAcceptingMergeRequest = async (
 		};
 	}
 
-	const currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.head_pipeline;
 	if (currentPipeline === null) {
 		console.log(
 			`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`,
@@ -624,44 +616,6 @@ export const runAcceptingMergeRequest = async (
 			user,
 			pipeline: currentPipeline,
 		};
-	}
-
-	if ([PipelineStatus.Manual, PipelineStatus.Canceled].includes(currentPipeline.status)) {
-		if (!config.AUTORUN_MANUAL_BLOCKING_JOBS) {
-			return {
-				kind: AcceptMergeRequestResultKind.WaitingPipeline,
-				mergeRequestInfo,
-				user,
-				pipeline: currentPipeline,
-			};
-		}
-
-		const jobs = uniqueNamedJobsByDate(
-			await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
-		);
-
-		const manualJobsToRun = jobs.filter(
-			(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
-		);
-		const canceledJobsToRun = jobs.filter(
-			(job) => PipelineJobStatus.Canceled === job.status && !job.allow_failure,
-		);
-
-		if (manualJobsToRun.length > 0 || canceledJobsToRun.length > 0) {
-			console.log(
-				`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
-			);
-			job.updateStatus(JobStatus.WAITING_FOR_CI);
-			await Promise.all(
-				manualJobsToRun.map((job) => gitlabApi.runJob(mergeRequestInfo.project_id, job.id)),
-			);
-			await Promise.all(
-				canceledJobsToRun.map((job) =>
-					gitlabApi.retryJob(mergeRequestInfo.project_id, job.id),
-				),
-			);
-			return;
-		}
 	}
 
 	if (
