@@ -3,7 +3,7 @@ restartPolicy: Never
 
 image:
   repository: pepakriz/gitlab-merger-bot
-  tag: v2.0.0-beta10
+  tag: v2.0.0-beta11
   pullPolicy: IfNotPresent
 
 resources:
