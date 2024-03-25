@@ -1,6 +1,6 @@
 # GitLab merger bot
 
-[![Build Status](https://travis-ci.org/pepakriz/gitlab-merger-bot.svg)](https://travis-ci.org/pepakriz/gitlab-merger-bot)
+![Build Status](https://github.com/pepakriz/gitlab-merger-bot/actions/workflows/release.yml/badge.svg)
 
 ## What does it do?
 
@@ -15,8 +15,11 @@ Reasons can be for example:
 	- The merge request has unresolved discussions
 	- The merge request can't be rebased due to a conflict
 
-![Assign](https://i.imgur.com/B3Xnpgi.png)
-![Merged](https://i.imgur.com/N0WhuOU.png)
+<p align="center">
+	<img src="docs/merged.png" alt="Merged" />
+	<img src="docs/assign.png" alt="Assign" />
+	<img src="docs/queue.png" alt="Queue" width="546" height="auto" />
+</p>
 
 ### Advanced features
 
