@@ -8,17 +8,10 @@ export interface JobArgs {
 
 export type JobFunction = (args: JobArgs) => Promise<unknown> | unknown;
 
-interface JobState {
-	checkManualJobs: boolean;
-}
-
 export class Job {
 	private _info: JobInfo;
 	private _status: JobStatus;
 	private _priority: JobPriority;
-	private _state: JobState = {
-		checkManualJobs: true,
-	};
 
 	private readonly _id: string;
 	private readonly _fn: JobFunction;
@@ -67,10 +60,6 @@ export class Job {
 		this.onChange();
 	}
 
-	public updateState(callback: (state: JobState) => JobState) {
-		this._state = callback(this._state);
-	}
-
 	public run(args: JobArgs): Promise<unknown> | unknown {
 		return this._fn(args);
 	}
@@ -89,10 +78,6 @@ export class Job {
 
 	get priority(): JobPriority {
 		return this._priority;
-	}
-
-	get state(): JobState {
-		return this._state;
 	}
 
 	public getData(): GQLJob {
