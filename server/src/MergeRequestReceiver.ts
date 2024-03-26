@@ -1,10 +1,11 @@
-import { DetailedMergeStatus, GitlabApi, MergeRequest, User } from './GitlabApi';
+import { DetailedMergeStatus, GitlabApi, MergeRequest, ToDo, User } from './GitlabApi';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { sendNote } from './SendNote';
 import {
 	acceptMergeRequest,
 	AcceptMergeRequestResultKind,
 	BotLabels,
+	containsAssignedUser,
 	runAcceptingMergeRequest,
 } from './MergeRequestAcceptor';
 import { resolveMergeRequestResult } from './MergeRequestResultResolver';
@@ -18,8 +19,28 @@ export const prepareMergeRequestForMerge = async (
 	user: User,
 	worker: Worker,
 	config: Config,
-	mergeRequest: MergeRequest,
+	mergeRequestData:
+		| {
+				mergeRequestTodo: ToDo;
+		  }
+		| {
+				mergeRequest: MergeRequest;
+		  },
 ) => {
+	const { mergeRequest, author } = (() => {
+		if ('mergeRequestTodo' in mergeRequestData) {
+			return {
+				mergeRequest: mergeRequestData.mergeRequestTodo.target,
+				author: mergeRequestData.mergeRequestTodo.author,
+			};
+		}
+
+		return {
+			mergeRequest: mergeRequestData.mergeRequest,
+			author: null,
+		};
+	})();
+
 	const jobId = `accept-merge-${mergeRequest.id}`;
 	const jobPriority = mergeRequest.labels.includes(config.HIGH_PRIORITY_LABEL)
 		? JobPriority.HIGH
@@ -48,6 +69,64 @@ export const prepareMergeRequestForMerge = async (
 		console.log(`[loop][MR][${mergeRequest.iid}] Changing job priority to ${jobPriority}.`);
 		await worker.setJobPriority(mergeRequest.target_project_id, jobId, jobPriority);
 		return;
+	}
+
+	if (!containsAssignedUser(mergeRequest, user)) {
+		if ('mergeRequestTodo' in mergeRequestData) {
+			await gitlabApi.markTodoAsDone(mergeRequestData.mergeRequestTodo.id);
+		}
+
+		return;
+	}
+
+	// Validate permissions
+	if (author !== null) {
+		const protectedBranch = await gitlabApi.getProtectedBranch(
+			mergeRequest.target_project_id,
+			mergeRequest.target_branch,
+		);
+		if (protectedBranch !== null) {
+			const member = await gitlabApi.getMember(mergeRequest.target_project_id, author.id);
+			if (member === null) {
+				await Promise.all([
+					assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
+					sendNote(
+						gitlabApi,
+						mergeRequest,
+						`I can't merge it because the merge request was made by ${author.username} who is unauthorized for this instruction.`,
+					),
+				]);
+
+				return;
+			}
+
+			const hasAccessLevel = protectedBranch.merge_access_levels.find((mergeAccessLevel) => {
+				if (mergeAccessLevel.user_id !== null && member.id === mergeAccessLevel.user_id) {
+					return true;
+				}
+
+				if (
+					mergeAccessLevel.access_level !== null &&
+					member.access_level >= mergeAccessLevel.access_level
+				) {
+					return true;
+				}
+
+				return false;
+			});
+			if (!hasAccessLevel) {
+				await Promise.all([
+					assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
+					sendNote(
+						gitlabApi,
+						mergeRequest,
+						`I can't merge it because the merge request was made by ${author.username} who doesn't pass the protection of the target branch.`,
+					),
+				]);
+
+				return;
+			}
+		}
 	}
 
 	if (mergeRequest.detailed_merge_status === DetailedMergeStatus.DraftStatus) {
@@ -155,6 +234,9 @@ export const prepareMergeRequestForMerge = async (
 			}
 
 			console.log(`Finishing job: ${JSON.stringify(result)}`);
+			if ('mergeRequestTodo' in mergeRequestData) {
+				await gitlabApi.markTodoAsDone(mergeRequestData.mergeRequestTodo.id);
+			}
 			success();
 			await resolveMergeRequestResult(gitlabApi, result);
 		},

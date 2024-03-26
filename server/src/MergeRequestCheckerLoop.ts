@@ -1,4 +1,4 @@
-import { GitlabApi, MergeRequest, User } from './GitlabApi';
+import { GitlabApi, MergeRequest, ToDo, User } from './GitlabApi';
 import { prepareMergeRequestForMerge } from './MergeRequestReceiver';
 import { Config } from './Config';
 import { Worker } from './Worker';
@@ -69,17 +69,26 @@ export class MergeRequestCheckerLoop {
 	}
 
 	private async task() {
+		if (this.config.ENABLE_PERMISSION_VALIDATION) {
+			console.log('[loop] Checking new todos');
+			const mergeRequestTodos = await this.gitlabApi.getMergeRequestTodos();
+			const possibleToAcceptMergeRequests = mergeRequestTodos.map((mergeRequestTodo: ToDo) =>
+				prepareMergeRequestForMerge(this.gitlabApi, this.user, this.worker, this.config, {
+					mergeRequestTodo,
+				}),
+			);
+
+			await Promise.all(possibleToAcceptMergeRequests);
+			return;
+		}
+
 		console.log('[loop] Checking assigned merge requests');
 		const assignedMergeRequests = await this.gitlabApi.getAssignedOpenedMergeRequests();
 		const possibleToAcceptMergeRequests = assignedMergeRequests.map(
 			(mergeRequest: MergeRequest) =>
-				prepareMergeRequestForMerge(
-					this.gitlabApi,
-					this.user,
-					this.worker,
-					this.config,
+				prepareMergeRequestForMerge(this.gitlabApi, this.user, this.worker, this.config, {
 					mergeRequest,
-				),
+				}),
 		);
 
 		await Promise.all(possibleToAcceptMergeRequests);

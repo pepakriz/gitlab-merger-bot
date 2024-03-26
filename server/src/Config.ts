@@ -16,6 +16,7 @@ export const defaultConfig = {
 	WEB_HOOK_TOKEN: '',
 	DRY_RUN: false,
 	HTTP_PROXY: '',
+	ENABLE_PERMISSION_VALIDATION: false,
 };
 
 export const getConfig = (): Config => ({
@@ -66,6 +67,10 @@ export const getConfig = (): Config => ({
 	WEB_HOOK_TOKEN: env.get('WEB_HOOK_TOKEN').default(defaultConfig.WEB_HOOK_TOKEN).asString(),
 	DRY_RUN: env.get('DRY_RUN').default(`${defaultConfig.DRY_RUN}`).asBoolStrict(),
 	HTTP_PROXY: env.get('HTTP_PROXY').default('').asString(),
+	ENABLE_PERMISSION_VALIDATION: env
+		.get('ENABLE_PERMISSION_VALIDATION')
+		.default(`${defaultConfig.ENABLE_PERMISSION_VALIDATION}`)
+		.asBoolStrict(),
 });
 
 export type Config = typeof defaultConfig;

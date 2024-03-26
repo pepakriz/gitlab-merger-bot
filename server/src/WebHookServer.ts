@@ -62,7 +62,7 @@ const processMergeRequestHook = async (
 			data.project.id,
 			data.object_attributes.iid,
 		);
-		await prepareMergeRequestForMerge(gitlabApi, user, worker, config, mergeRequest);
+		await prepareMergeRequestForMerge(gitlabApi, user, worker, config, { mergeRequest });
 		return;
 	}
 
