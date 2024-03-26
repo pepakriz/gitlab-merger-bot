@@ -2,6 +2,7 @@ import fetch, { FetchError, RequestInit, Response } from 'node-fetch';
 import queryString, { ParsedUrlQueryInput } from 'querystring';
 import { sleep } from './Utils';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import * as console from 'console';
 
 export interface User {
 	id: number;
@@ -40,13 +41,55 @@ interface MergeRequestAssignee {
 	id: number;
 }
 
+export interface ProtectedBranch {
+	id: number;
+	name: string;
+	merge_access_levels: (
+		| {
+				access_level: number;
+				user_id: null;
+				group_id: null;
+		  }
+		| {
+				access_level: null;
+				user_id: number;
+				group_id: null;
+		  }
+		| {
+				access_level: null;
+				user_id: null;
+				group_id: number;
+		  }
+	)[];
+}
+
+interface Author {
+	id: number;
+	username: string;
+	name: string;
+	web_url: string;
+	state: 'active' | 'awaiting';
+}
+
+export interface Member extends Author {
+	access_level: number;
+	expires_at: string | null;
+}
+
+export interface ToDo {
+	id: number;
+	project: {
+		id: number;
+	};
+	author: Author;
+	target: MergeRequest;
+}
+
 export interface MergeRequest {
 	id: number;
 	iid: number;
 	title: string;
-	author: {
-		id: number;
-	};
+	author: Author;
 	assignee: MergeRequestAssignee | null;
 	assignees: MergeRequestAssignee[];
 	project_id: number;
@@ -159,6 +202,37 @@ export class GitlabApi {
 		return this.sendRequestWithSingleResponse(`/api/v4/users/${userId}`, RequestMethod.Get);
 	}
 
+	public async getProtectedBranch(
+		projectId: number,
+		name: string,
+	): Promise<ProtectedBranch | null> {
+		return this.sendRequestWithSingleResponse(
+			`/api/v4/projects/${projectId}/protected_branches/${encodeURIComponent(name)}`,
+			RequestMethod.Get,
+		);
+	}
+
+	public async getMember(projectId: number, userId: number): Promise<Member | null> {
+		return this.sendRequestWithSingleResponse(
+			`/api/v4/projects/${projectId}/members/${userId}`,
+			RequestMethod.Get,
+		);
+	}
+
+	public async getMergeRequestTodos(): Promise<ToDo[]> {
+		return this.sendRequestWithMultiResponse(
+			`/api/v4/todos?type=MergeRequest&action=assigned&state=pending`,
+			RequestMethod.Get,
+		);
+	}
+
+	public async markTodoAsDone(todoId: number): Promise<void> {
+		return this.sendRequestWithSingleResponse(
+			`/api/v4/todos/${todoId}/mark_as_done`,
+			RequestMethod.Post,
+		);
+	}
+
 	public async getAssignedOpenedMergeRequests(): Promise<MergeRequest[]> {
 		return this.sendRequestWithMultiResponse(
 			`/api/v4/merge_requests?scope=assigned_to_me&state=opened`,
@@ -187,16 +261,6 @@ export class GitlabApi {
 				include_diverged_commits_count: true,
 				include_rebase_in_progress: true,
 			},
-		);
-	}
-
-	public async getMergeRequestPipelines(
-		projectId: number,
-		mergeRequestIid: number,
-	): Promise<MergeRequestPipeline[]> {
-		return this.sendRequestWithMultiResponse(
-			`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/pipelines`,
-			RequestMethod.Get,
 		);
 	}
 
@@ -287,6 +351,10 @@ export class GitlabApi {
 		body?: ParsedUrlQueryInput,
 	): Promise<any> {
 		const response = await this.sendRawRequest(url, method, body);
+		if (response.status === 404) {
+			return null;
+		}
+
 		await this.validateResponseStatus(response);
 
 		const data = await response.json();

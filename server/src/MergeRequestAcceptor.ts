@@ -186,7 +186,7 @@ const incompletePipelineStatuses = [
 ];
 
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
-const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
+export const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
 	const userIds = mergeRequest.assignees.map((assignee) => assignee.id);
 	return userIds.includes(user.id);
 };
