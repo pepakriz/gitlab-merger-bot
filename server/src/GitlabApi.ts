@@ -214,7 +214,7 @@ export class GitlabApi {
 
 	public async getMember(projectId: number, userId: number): Promise<Member | null> {
 		return this.sendRequestWithSingleResponse(
-			`/api/v4/projects/${projectId}/members/${userId}`,
+			`/api/v4/projects/${projectId}/members/all/${userId}`,
 			RequestMethod.Get,
 		);
 	}
