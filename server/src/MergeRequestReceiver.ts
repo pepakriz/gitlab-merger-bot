@@ -1,4 +1,4 @@
-import { DetailedMergeStatus, GitlabApi, MergeRequest, ToDo, User } from './GitlabApi';
+import { DetailedMergeStatus, GitlabApi, MergeRequest, MergeState, ToDo, User } from './GitlabApi';
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { sendNote } from './SendNote';
 import {
@@ -76,6 +76,11 @@ export const prepareMergeRequestForMerge = async (
 			await gitlabApi.markTodoAsDone(mergeRequestData.mergeRequestTodo.id);
 		}
 
+		return;
+	}
+
+	if (mergeRequest.state === MergeState.Merged) {
+		await assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user);
 		return;
 	}
 
