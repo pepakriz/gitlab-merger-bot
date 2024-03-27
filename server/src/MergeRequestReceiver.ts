@@ -80,7 +80,16 @@ export const prepareMergeRequestForMerge = async (
 	}
 
 	if (mergeRequest.state === MergeState.Merged) {
-		await assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user);
+		await setBotLabels(gitlabApi, mergeRequest, []);
+		return;
+	}
+
+	if (mergeRequest.state !== MergeState.Opened) {
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
+			setBotLabels(gitlabApi, mergeRequest, []),
+		]);
+
 		return;
 	}
 
