@@ -61,8 +61,8 @@ export const resolveMergeRequestResult = async (
 		return;
 	}
 
-	if (result.kind === AcceptMergeRequestResultKind.ClosedMergeRequest) {
-		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is closed, ending`);
+	if (result.kind === AcceptMergeRequestResultKind.NotOpenMergeRequest) {
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is not open, ending`);
 
 		await Promise.all([
 			tryCancelPipeline(gitlabApi, mergeRequestInfo, user),

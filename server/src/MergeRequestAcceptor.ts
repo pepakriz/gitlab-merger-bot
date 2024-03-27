@@ -20,7 +20,7 @@ import { JobStatus } from './generated/graphqlgen';
 
 export enum AcceptMergeRequestResultKind {
 	SuccessfullyMerged,
-	ClosedMergeRequest,
+	NotOpenMergeRequest,
 	ReassignedMergeRequest,
 	CanNotBeMerged,
 	HasConflict,
@@ -47,8 +47,8 @@ interface SuccessResponse extends Response {
 	mergeRequestInfo: MergeRequestInfo;
 }
 
-interface ClosedMergeRequestResponse extends Response {
-	kind: AcceptMergeRequestResultKind.ClosedMergeRequest;
+interface NotOpenMergeRequestResponse extends Response {
+	kind: AcceptMergeRequestResultKind.NotOpenMergeRequest;
 	mergeRequestInfo: MergeRequestInfo;
 }
 
@@ -129,7 +129,7 @@ interface PipelineInProgressResponse extends Response {
 
 export type AcceptMergeRequestResult =
 	| SuccessResponse
-	| ClosedMergeRequestResponse
+	| NotOpenMergeRequestResponse
 	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
 	| HasConflictResponse
@@ -143,7 +143,7 @@ export type AcceptMergeRequestResult =
 
 export type MergeMergeRequestResult =
 	| SuccessResponse
-	| ClosedMergeRequestResponse
+	| NotOpenMergeRequestResponse
 	| ReassignedMergeRequestResponse
 	| CanNotBeMergedResponse
 	| HasConflictResponse
@@ -233,16 +233,12 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (mergeRequestInfo.state === MergeState.Closed) {
+	if (mergeRequestInfo.state !== MergeState.Opened) {
 		return {
-			kind: AcceptMergeRequestResultKind.ClosedMergeRequest,
+			kind: AcceptMergeRequestResultKind.NotOpenMergeRequest,
 			mergeRequestInfo,
 			user,
 		};
-	}
-
-	if (mergeRequestInfo.state !== MergeState.Opened) {
-		throw new Error(`Unexpected MR status: ${mergeRequestInfo.state}`);
 	}
 
 	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.DiscussionsNotResolved) {
@@ -449,7 +445,7 @@ export const runAcceptingMergeRequest = async (
 	);
 	if (
 		mergeResponse.kind === AcceptMergeRequestResultKind.SuccessfullyMerged ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.ClosedMergeRequest ||
+		mergeResponse.kind === AcceptMergeRequestResultKind.NotOpenMergeRequest ||
 		mergeResponse.kind === AcceptMergeRequestResultKind.Unauthorized ||
 		mergeResponse.kind === AcceptMergeRequestResultKind.WorkInProgress ||
 		mergeResponse.kind === AcceptMergeRequestResultKind.UnresolvedDiscussion ||
@@ -519,6 +515,19 @@ export const runAcceptingMergeRequest = async (
 		const jobs = uniqueNamedJobsByDate(
 			await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
 		);
+
+		// Mark pipeline as failed when a failed job is found
+		const failedJob = jobs.find(
+			(job) => !job.allow_failure && job.status === PipelineJobStatus.Failed,
+		);
+		if (failedJob !== undefined) {
+			return {
+				kind: AcceptMergeRequestResultKind.FailedPipeline,
+				mergeRequestInfo,
+				user,
+				pipeline: currentPipeline,
+			};
+		}
 
 		const manualJobsToRun = jobs.filter(
 			(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
