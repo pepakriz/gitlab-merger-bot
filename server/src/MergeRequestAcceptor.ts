@@ -299,16 +299,15 @@ export const acceptMergeRequest = async (
 		};
 	}
 
+	// the latest pipeline is incomplete / has failed
 	if (
-		[DetailedMergeStatus.CiMustPass, DetailedMergeStatus.CiStillRunning].includes(
-			mergeRequestInfo.detailed_merge_status,
-		)
+		mergeRequestInfo.head_pipeline !== null &&
+		incompletePipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)
 	) {
 		return {
-			kind: AcceptMergeRequestResultKind.PipelineInProgress,
+			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 			mergeRequestInfo,
 			user,
-			pipeline: mergeRequestInfo.head_pipeline,
 		};
 	}
 
@@ -321,6 +320,19 @@ export const acceptMergeRequest = async (
 			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 			mergeRequestInfo,
 			user,
+		};
+	}
+
+	if (
+		[DetailedMergeStatus.CiMustPass, DetailedMergeStatus.CiStillRunning].includes(
+			mergeRequestInfo.detailed_merge_status,
+		)
+	) {
+		return {
+			kind: AcceptMergeRequestResultKind.PipelineInProgress,
+			mergeRequestInfo,
+			user,
+			pipeline: mergeRequestInfo.head_pipeline,
 		};
 	}
 
@@ -506,6 +518,14 @@ export const runAcceptingMergeRequest = async (
 	}
 
 	const currentPipeline = mergeRequestInfo.head_pipeline;
+	if (currentPipeline !== null && currentPipeline.status === PipelineStatus.Failed) {
+		return {
+			kind: AcceptMergeRequestResultKind.FailedPipeline,
+			mergeRequestInfo,
+			user,
+			pipeline: currentPipeline,
+		};
+	}
 
 	if (
 		currentPipeline !== null &&
@@ -616,15 +636,6 @@ export const runAcceptingMergeRequest = async (
 		);
 		job.updateStatus(JobStatus.WAITING_FOR_CI);
 		return;
-	}
-
-	if (currentPipeline.status === PipelineStatus.Failed) {
-		return {
-			kind: AcceptMergeRequestResultKind.FailedPipeline,
-			mergeRequestInfo,
-			user,
-			pipeline: currentPipeline,
-		};
 	}
 
 	if (
