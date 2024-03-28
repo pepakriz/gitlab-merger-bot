@@ -3,7 +3,7 @@ restartPolicy: Never
 
 image:
   repository: pepakriz/gitlab-merger-bot
-  tag: v2.0.0-beta11
+  tag: v2.0.0-beta12
   pullPolicy: IfNotPresent
 
 resources:
@@ -90,3 +90,4 @@ settings:
   webHookToken: ""
   httpProxySecretName: http-proxy
   httpProxy: ""
+  enablePermissionValidation: false
