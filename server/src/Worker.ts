@@ -5,9 +5,11 @@ import { Config } from './Config';
 import { Job, JobFunction } from './Job';
 import { JobInfo, JobPriority, QueueInfo, Queue as GQLQueue } from './generated/graphqlgen';
 
+export type QueueId = string & { _kind: 'QueueId' };
+
 export class Worker {
 	private _stop: boolean = true;
-	private queues: Record<number, Queue> = {};
+	private queues = new Map<QueueId, Queue>();
 
 	private readonly pubSub: PubSub;
 	private readonly config: Config;
@@ -18,7 +20,7 @@ export class Worker {
 	}
 
 	public getQueuesData(): GQLQueue[] {
-		return Object.entries(this.queues).map(([key, value]) => ({
+		return Array.from(this.queues.entries()).map(([key, value]) => ({
 			name: key,
 			...value.getData(),
 		}));
@@ -32,8 +34,8 @@ export class Worker {
 		console.log('[worker] Starting');
 		this._stop = false;
 
-		return Object.entries(this.queues).forEach(([key, value]) => {
-			value.start();
+		return Array.from(this.queues.values()).forEach((queue) => {
+			queue.start();
 		});
 	}
 
@@ -44,66 +46,76 @@ export class Worker {
 
 		console.log('[worker] Shutting down');
 		this._stop = true;
-		await Promise.all(Object.entries(this.queues).map(([key, value]) => value.stop()));
+		await Promise.all(Array.from(this.queues.values()).map((queue) => queue.stop()));
 		console.log('[worker] Stopped');
 	}
 
-	public findJobPriorityInQueue(queueId: number, jobId: string): JobPriority | null {
-		if (typeof this.queues[queueId] === 'undefined') {
+	public findJobPriorityInQueue(queueId: QueueId, jobId: string): JobPriority | null {
+		const queue = this.queues.get(queueId);
+		if (queue === undefined) {
 			return null;
 		}
 
-		return this.queues[queueId].findPriorityByJobId(jobId);
+		return queue.findPriorityByJobId(jobId);
 	}
 
-	public findJob(queueId: number, jobId: string): Job | null {
-		if (typeof this.queues[queueId] === 'undefined') {
+	public findJob(queueId: QueueId, jobId: string): Job | null {
+		const queue = this.queues.get(queueId);
+		if (queue === undefined) {
 			return null;
 		}
 
-		return this.queues[queueId].findJob(jobId);
+		return queue.findJob(jobId);
 	}
 
-	public setJobPriority(queueId: number, jobId: string, jobPriority: JobPriority): void {
-		if (typeof this.queues[queueId] === 'undefined') {
+	public setJobPriority(queueId: QueueId, jobId: string, jobPriority: JobPriority): void {
+		const queue = this.queues.get(queueId);
+		if (queue === undefined) {
 			return;
 		}
 
-		this.queues[queueId].setJobPriority(jobId, jobPriority);
+		queue.setJobPriority(jobId, jobPriority);
 	}
 
-	public async removeJobFromQueue(queueId: number, jobId: string) {
-		this.queues[queueId].removeJob(jobId);
+	public async removeJobFromQueue(queueId: QueueId, jobId: string) {
+		const queue = this.queues.get(queueId);
+		if (queue === undefined) {
+			return;
+		}
+
+		queue.removeJob(jobId);
 	}
 
 	public registerJobToQueue<T extends Promise<any>>(
-		queueId: number,
+		queueId: QueueId,
 		queueInfo: QueueInfo,
 		jobPriority: JobPriority,
 		jobId: string,
 		job: JobFunction,
 		jobInfo: JobInfo,
 	): void {
-		if (typeof this.queues[queueId] === 'undefined') {
+		let queue = this.queues.get(queueId);
+		if (queue === undefined) {
 			console.log(`[worker][${queueId}] Creating queue`);
-			this.queues[queueId] = new Queue(this.config, queueInfo, async () => {
-				Object.entries(this.queues).map(([key, value]) => {
+			queue = new Queue(this.config, queueInfo, async () => {
+				Array.from(this.queues.entries()).map(([key, value]) => {
 					if (value.isEmpty()) {
 						console.log(`[worker][${queueId}] Deleting queue`);
-						const queue = this.queues[parseInt(key, 10)];
-						queue.stop();
-						delete this.queues[parseInt(key, 10)];
+						value.stop();
+						this.queues.delete(key);
 					}
 				});
 
 				await this.pubSub.publish(AppEvent.QUEUE_CHANGED, {});
 			});
 
+			this.queues.set(queueId, queue);
+
 			if (!this._stop) {
-				this.queues[queueId].start();
+				queue.start();
 			}
 		}
 
-		this.queues[queueId].registerJob(jobId, job, jobPriority, jobInfo);
+		queue.registerJob(jobId, job, jobPriority, jobInfo);
 	}
 }

@@ -5,4 +5,4 @@ export const sendNote = (
 	mergeRequest: MergeRequest,
 	body: string,
 ): Promise<void> =>
-	gitlabApi.createMergeRequestNote(mergeRequest.project_id, mergeRequest.iid, body);
+	gitlabApi.createMergeRequestNote(mergeRequest.target_project_id, mergeRequest.iid, body);

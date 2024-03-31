@@ -6,7 +6,7 @@ export const setBotLabels = async (
 	mergeRequest: MergeRequest,
 	labels: BotLabels[],
 ) => {
-	await gitlabApi.updateMergeRequest(mergeRequest.project_id, mergeRequest.iid, {
+	await gitlabApi.updateMergeRequest(mergeRequest.target_project_id, mergeRequest.iid, {
 		labels: [...filterBotLabels(mergeRequest.labels), ...labels].join(','),
 	});
 };

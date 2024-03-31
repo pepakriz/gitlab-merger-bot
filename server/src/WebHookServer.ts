@@ -18,19 +18,22 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { makeExecutableSchema } from '@graphql-tools/schema';
 
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
+import { formatQueueId } from './Utils';
 
 interface MergeRequestAssignee {
 	username: string;
 }
 
 interface MergeRequestHook {
-	project: {
-		id: number;
-	};
+	// project: {
+	// 	id: number;
+	// };
 	object_attributes: {
 		id: number;
 		iid: number;
 		state: MergeState;
+		target_project_id: number;
+		target_branch: string;
 	};
 	labels: string[];
 	assignees?: MergeRequestAssignee[];
@@ -59,7 +62,7 @@ const processMergeRequestHook = async (
 
 	if (containsAssignedUser(data, user)) {
 		const mergeRequest = await gitlabApi.getMergeRequest(
-			data.project.id,
+			data.object_attributes.target_project_id,
 			data.object_attributes.iid,
 		);
 		await prepareMergeRequestForMerge(gitlabApi, user, worker, config, { mergeRequest });
@@ -67,9 +70,9 @@ const processMergeRequestHook = async (
 	}
 
 	const jobId = `accept-merge-${data.object_attributes.id}`;
-	const currentJob = worker.findJob(data.project.id, jobId);
+	const currentJob = worker.findJob(formatQueueId(data.object_attributes), jobId);
 	if (currentJob !== null) {
-		await worker.removeJobFromQueue(data.project.id, jobId);
+		await worker.removeJobFromQueue(formatQueueId(data.object_attributes), jobId);
 	}
 };
 
@@ -216,7 +219,7 @@ export class WebHookServer {
 						);
 						await assignToAuthorAndResetLabels(this.gitlabApi, mergeRequest, this.user);
 						const jobId = `accept-merge-${mergeRequest.id}`;
-						await this.worker.removeJobFromQueue(mergeRequest.project_id, jobId);
+						await this.worker.removeJobFromQueue(formatQueueId(mergeRequest), jobId);
 
 						return null;
 					},

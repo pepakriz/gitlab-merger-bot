@@ -28,6 +28,7 @@ export enum DetailedMergeStatus {
 	JiraAssociationMissing = 'jira_association_missing',
 	NeedsRebase = 'needs_rebase',
 	Conflict = 'conflict',
+	RequestedChanges = 'requested_changes',
 }
 
 export enum MergeState {
@@ -92,7 +93,6 @@ export interface MergeRequest {
 	author: Author;
 	assignee: MergeRequestAssignee | null;
 	assignees: MergeRequestAssignee[];
-	project_id: number;
 	detailed_merge_status: DetailedMergeStatus;
 	web_url: string;
 	source_branch: string;

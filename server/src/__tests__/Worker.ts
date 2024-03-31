@@ -1,4 +1,4 @@
-import { Worker } from '../Worker';
+import { QueueId, Worker } from '../Worker';
 import { defaultConfig } from '../Config';
 import { PubSub } from 'graphql-subscriptions';
 import { JobInfo, JobPriority } from '../generated/graphqlgen';
@@ -29,18 +29,32 @@ it('runs two jobs', async () => {
 	const pubSub = new PubSub();
 	const worker = new Worker(pubSub, config);
 
-	expect(worker.findJobPriorityInQueue(1, 'fooJob')).toBe(null);
-	expect(worker.findJobPriorityInQueue(2, 'fooJob')).toBe(null);
+	expect(worker.findJobPriorityInQueue('1' as QueueId, 'fooJob')).toBe(null);
+	expect(worker.findJobPriorityInQueue('2' as QueueId, 'fooJob')).toBe(null);
 
-	worker.registerJobToQueue(1, queueInfoMock, JobPriority.NORMAL, 'fooJob', job1, jobInfoMock);
+	worker.registerJobToQueue(
+		'1' as QueueId,
+		queueInfoMock,
+		JobPriority.NORMAL,
+		'fooJob',
+		job1,
+		jobInfoMock,
+	);
 
-	expect(worker.findJobPriorityInQueue(1, 'fooJob')).toBe(JobPriority.NORMAL);
-	expect(worker.findJobPriorityInQueue(2, 'fooJob')).toBe(null);
+	expect(worker.findJobPriorityInQueue('1' as QueueId, 'fooJob')).toBe(JobPriority.NORMAL);
+	expect(worker.findJobPriorityInQueue('2' as QueueId, 'fooJob')).toBe(null);
 
-	worker.registerJobToQueue(2, queueInfoMock, JobPriority.NORMAL, 'fooJob', job2, jobInfoMock);
+	worker.registerJobToQueue(
+		'2' as QueueId,
+		queueInfoMock,
+		JobPriority.NORMAL,
+		'fooJob',
+		job2,
+		jobInfoMock,
+	);
 
-	expect(worker.findJobPriorityInQueue(1, 'fooJob')).toBe(JobPriority.NORMAL);
-	expect(worker.findJobPriorityInQueue(2, 'fooJob')).toBe(JobPriority.NORMAL);
+	expect(worker.findJobPriorityInQueue('1' as QueueId, 'fooJob')).toBe(JobPriority.NORMAL);
+	expect(worker.findJobPriorityInQueue('2' as QueueId, 'fooJob')).toBe(JobPriority.NORMAL);
 
 	expect(job1.mock.calls.length).toBe(0);
 	expect(job2.mock.calls.length).toBe(0);
