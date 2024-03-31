@@ -93,6 +93,20 @@ export const prepareMergeRequestForMerge = async (
 		return;
 	}
 
+	if (
+		config.ALLOWED_PROJECT_IDS.length > 0 &&
+		!config.ALLOWED_PROJECT_IDS.includes(mergeRequest.target_project_id.toString())
+	) {
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
+			sendNote(
+				gitlabApi,
+				mergeRequest,
+				`I can't merge it because I'm not allowed to operate on this project.`,
+			),
+		]);
+	}
+
 	// Validate permissions
 	if (author !== null) {
 		const protectedBranch = await gitlabApi.getProtectedBranch(

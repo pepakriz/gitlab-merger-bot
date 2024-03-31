@@ -17,6 +17,7 @@ export const defaultConfig = {
 	DRY_RUN: false,
 	HTTP_PROXY: '',
 	ENABLE_PERMISSION_VALIDATION: false,
+	ALLOWED_PROJECT_IDS: [] as string[],
 };
 
 export const getConfig = (): Config => ({
@@ -71,6 +72,10 @@ export const getConfig = (): Config => ({
 		.get('ENABLE_PERMISSION_VALIDATION')
 		.default(`${defaultConfig.ENABLE_PERMISSION_VALIDATION}`)
 		.asBoolStrict(),
+	ALLOWED_PROJECT_IDS: env
+		.get('ALLOWED_PROJECT_IDS')
+		.default(`${defaultConfig.ALLOWED_PROJECT_IDS}`)
+		.asArray(),
 });
 
 export type Config = typeof defaultConfig;

@@ -39,6 +39,8 @@ spec:
           value: "{{ .Values.settings.authToken }}"
         - name: GITLAB_URL
           value: "{{ .Values.settings.gitlabUrl }}"
+        - name: ALLOWED_PROJECT_IDS
+          value: "{{ .Values.settings.allowedProjectIds }}"
         - name: CI_CHECK_INTERVAL
           value: "{{ .Values.settings.ciCheckInterval }}"
         - name: MR_CHECK_INTERVAL
