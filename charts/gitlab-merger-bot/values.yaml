@@ -78,6 +78,7 @@ settings:
   gitlabUrl: "https://gitlab.com"
   authToken: ""
   sentryDsn: ""
+  allowedProjectIds: ""
   ciCheckInterval: 10
   mrCheckInterval: 20
   removeBranchAfterMerge: true
