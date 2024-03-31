@@ -28,6 +28,19 @@ entries:
     - https://github.com/pepakriz/gitlab-merger-bot/releases/download/gitlab-merger-bot-2.0.0-beta2/gitlab-merger-bot-2.0.0-beta2.tgz
     version: 2.0.0-beta2
   - apiVersion: v1
+    appVersion: 2.0.0-beta13
+    created: "2024-03-31T11:28:28.115278653Z"
+    description: A Helm chart for Kubernetes
+    digest: 3e934cd5aa8d4b8cf699ac974335d4d76579c4a8a0295e58af7ef3da613c8ca7
+    home: https://github.com/pepakriz/gitlab-merger-bot
+    maintainers:
+    - email: pepakriz@gmail.com
+      name: pepakriz
+    name: gitlab-merger-bot
+    urls:
+    - https://github.com/pepakriz/gitlab-merger-bot/releases/download/gitlab-merger-bot-2.0.0-beta13/gitlab-merger-bot-2.0.0-beta13.tgz
+    version: 2.0.0-beta13
+  - apiVersion: v1
     appVersion: 2.0.0-beta12
     created: "2024-03-28T17:10:45.595903613Z"
     description: A Helm chart for Kubernetes
@@ -131,4 +144,4 @@ entries:
     urls:
     - https://github.com/pepakriz/gitlab-merger-bot/releases/download/gitlab-merger-bot-1.2.1/gitlab-merger-bot-1.2.1.tgz
     version: 1.2.1
-generated: "2024-03-28T17:10:45.595954287Z"
+generated: "2024-03-31T11:28:28.115326433Z"
