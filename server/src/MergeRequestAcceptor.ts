@@ -2,9 +2,7 @@ import {
 	DetailedMergeStatus,
 	GitlabApi,
 	MergeRequest,
-	MergeRequestApprovals,
 	MergeRequestInfo,
-	MergeRequestPipeline,
 	MergeState,
 	PipelineJob,
 	PipelineJobStatus,
@@ -17,173 +15,14 @@ import { setBotLabels } from './BotLabelsSetter';
 import { Config } from './Config';
 import { Job } from './Job';
 import { JobStatus } from './generated/graphqlgen';
-
-export enum AcceptMergeRequestResultKind {
-	SuccessfullyMerged,
-	NotOpenMergeRequest,
-	ReassignedMergeRequest,
-	CanNotBeMerged,
-	HasConflict,
-	FailedPipeline,
-	PipelineInProgress,
-	InvalidPipeline,
-	WaitingPipeline,
-	WaitingForApprovals,
-	UnresolvedDiscussion,
-	Unauthorized,
-	InvalidSha,
-	RebaseInProgress,
-	CheckingMergeStatus,
-	WorkInProgress,
-}
-
-interface Response {
-	mergeRequestInfo: MergeRequestInfo;
-	user: User;
-}
-
-interface SuccessResponse extends Response {
-	kind: AcceptMergeRequestResultKind.SuccessfullyMerged;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface NotOpenMergeRequestResponse extends Response {
-	kind: AcceptMergeRequestResultKind.NotOpenMergeRequest;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface ReassignedMergeRequestResponse extends Response {
-	kind: AcceptMergeRequestResultKind.ReassignedMergeRequest;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface CanNotBeMergedResponse extends Response {
-	kind: AcceptMergeRequestResultKind.CanNotBeMerged;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface HasConflictResponse extends Response {
-	kind: AcceptMergeRequestResultKind.HasConflict;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface FailedPipelineResponse extends Response {
-	kind: AcceptMergeRequestResultKind.FailedPipeline;
-	mergeRequestInfo: MergeRequestInfo;
-	pipeline: MergeRequestPipeline;
-}
-
-interface InvalidPipelineResponse extends Response {
-	kind: AcceptMergeRequestResultKind.InvalidPipeline;
-	mergeRequestInfo: MergeRequestInfo;
-	pipeline: MergeRequestPipeline | null;
-}
-
-interface WaitingPipelineResponse extends Response {
-	kind: AcceptMergeRequestResultKind.WaitingPipeline;
-	mergeRequestInfo: MergeRequestInfo;
-	pipeline: MergeRequestPipeline;
-}
-
-interface WaitingForApprovalsResponse extends Response {
-	kind: AcceptMergeRequestResultKind.WaitingForApprovals;
-	mergeRequestInfo: MergeRequestInfo;
-	approvals: MergeRequestApprovals;
-}
-
-interface UnresolvedDiscussionResponse extends Response {
-	kind: AcceptMergeRequestResultKind.UnresolvedDiscussion;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface UnauthorizedResponse extends Response {
-	kind: AcceptMergeRequestResultKind.Unauthorized;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface InvalidShaResponse extends Response {
-	kind: AcceptMergeRequestResultKind.InvalidSha;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface RebaseInProgressResponse extends Response {
-	kind: AcceptMergeRequestResultKind.RebaseInProgress;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface CheckingMergeStatusResponse extends Response {
-	kind: AcceptMergeRequestResultKind.CheckingMergeStatus;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface WorkInProgressResponse extends Response {
-	kind: AcceptMergeRequestResultKind.WorkInProgress;
-	mergeRequestInfo: MergeRequestInfo;
-}
-
-interface PipelineInProgressResponse extends Response {
-	kind: AcceptMergeRequestResultKind.PipelineInProgress;
-	mergeRequestInfo: MergeRequestInfo;
-	pipeline: MergeRequestPipeline | null;
-}
-
-export type AcceptMergeRequestResult =
-	| SuccessResponse
-	| NotOpenMergeRequestResponse
-	| ReassignedMergeRequestResponse
-	| CanNotBeMergedResponse
-	| HasConflictResponse
-	| FailedPipelineResponse
-	| InvalidPipelineResponse
-	| WaitingPipelineResponse
-	| WaitingForApprovalsResponse
-	| UnresolvedDiscussionResponse
-	| WorkInProgressResponse
-	| UnauthorizedResponse;
-
-export type MergeMergeRequestResult =
-	| SuccessResponse
-	| NotOpenMergeRequestResponse
-	| ReassignedMergeRequestResponse
-	| CanNotBeMergedResponse
-	| HasConflictResponse
-	| InvalidShaResponse
-	| UnresolvedDiscussionResponse
-	| RebaseInProgressResponse
-	| CheckingMergeStatusResponse
-	| WorkInProgressResponse
-	| PipelineInProgressResponse
-	| UnauthorizedResponse;
-
-export interface AcceptMergeRequestOptions {
-	removeBranchAfterMerge: boolean;
-	squashMergeRequest: boolean;
-	skipSquashingLabel: string;
-}
-
-export interface RunAcceptingMergeRequestOptions extends AcceptMergeRequestOptions {
-	ciInterval: number;
-	autorunManualBlockingJobs: boolean;
-}
+import { assignToAuthorAndResetLabels } from './AssignToAuthor';
+import { sendNote } from './SendNote';
 
 export enum BotLabels {
 	InMergeQueue = 'in-merge-queue',
 	Accepting = 'accepting',
 	WaitingForPipeline = 'waiting-for-pipeline',
 }
-
-const startingOrInProgressPipelineStatuses = [
-	PipelineStatus.Running,
-	PipelineStatus.Pending,
-	PipelineStatus.WaitingForResource,
-	PipelineStatus.Preparing,
-];
-
-const incompletePipelineStatuses = [
-	PipelineStatus.Failed,
-	PipelineStatus.Canceled,
-	PipelineStatus.Skipped,
-];
 
 const containsLabel = (labels: string[], label: BotLabels) => labels.includes(label);
 export const containsAssignedUser = (mergeRequest: MergeRequest, user: User) => {
@@ -216,142 +55,347 @@ const uniqueNamedJobsByDate = (jobs: PipelineJob[]): PipelineJob[] => {
 };
 
 export const acceptMergeRequest = async (
+	job: Job,
 	gitlabApi: GitlabApi,
 	projectId: number,
 	mergeRequestIid: number,
 	user: User,
 	config: Config,
-): Promise<MergeMergeRequestResult> => {
-	console.log(`[MR][${mergeRequestIid}] Calling merge request`);
+): Promise<'continue' | 'done'> => {
+	console.log(`[MR][${mergeRequestIid}] Checking...`);
+
 	const mergeRequestInfo = await gitlabApi.getMergeRequestInfo(projectId, mergeRequestIid);
-
 	if (mergeRequestInfo.state === MergeState.Merged) {
-		return {
-			kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
-			mergeRequestInfo,
-			user,
-		};
-	}
+		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is merged, ending`);
+		await setBotLabels(gitlabApi, mergeRequestInfo, []);
 
-	if (mergeRequestInfo.state !== MergeState.Opened) {
-		return {
-			kind: AcceptMergeRequestResultKind.NotOpenMergeRequest,
-			mergeRequestInfo,
-			user,
-		};
-	}
-
-	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.DiscussionsNotResolved) {
-		return {
-			kind: AcceptMergeRequestResultKind.UnresolvedDiscussion,
-			mergeRequestInfo,
-			user,
-		};
+		return 'done';
 	}
 
 	if (!containsAssignedUser(mergeRequestInfo, user)) {
-		return {
-			kind: AcceptMergeRequestResultKind.ReassignedMergeRequest,
-			mergeRequestInfo,
-			user,
-		};
+		console.log(
+			`[MR][${mergeRequestInfo.iid}] Merge request is assigned to different user, ending`,
+		);
+		await setBotLabels(gitlabApi, mergeRequestInfo, []);
+
+		return 'done';
 	}
 
-	if (mergeRequestInfo.rebase_in_progress) {
-		return {
-			kind: AcceptMergeRequestResultKind.RebaseInProgress,
-			mergeRequestInfo,
-			user,
-		};
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.NotOpen) {
+		const message = 'The merge request is not open anymore.';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
 	}
 
-	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Checking) {
-		return {
-			kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
-			mergeRequestInfo,
-			user,
-		};
-	}
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.DiscussionsNotResolved) {
+		const message = "The merge request has unresolved discussion, I can't merge it.";
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
 
-	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Conflict) {
-		return {
-			kind: AcceptMergeRequestResultKind.HasConflict,
-			mergeRequestInfo,
-			user,
-		};
+		return 'done';
 	}
 
 	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.DraftStatus) {
-		return {
-			kind: AcceptMergeRequestResultKind.WorkInProgress,
-			mergeRequestInfo,
-			user,
-		};
+		const message = 'The merge request is marked as a draft';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
 	}
 
-	// we are behind the target branch, rebase required
-	if (mergeRequestInfo.diverged_commits_count > 0) {
-		console.log(`[MR][${mergeRequestInfo.iid}] Branch has diverged commits`);
-		return {
-			kind: AcceptMergeRequestResultKind.InvalidSha,
-			mergeRequestInfo,
-			user,
-		};
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.RequestedChanges) {
+		const message = 'The merge request has Reviewers who have requested changes';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
 	}
 
-	// the latest pipeline is incomplete / has failed
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.JiraAssociationMissing) {
+		const message = 'The merge request title or description must reference a Jira issue.';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.ExternalStatusChecks) {
+		const message = 'All external status checks must pass before merge.';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.BlockedStatus) {
+		const message = 'The merge request is blocked by another merge request';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Conflict) {
+		const message = 'The merge request has conflict';
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.NotApproved) {
+		const approvals = await gitlabApi.getMergeRequestApprovals(
+			mergeRequestInfo.target_project_id,
+			mergeRequestInfo.iid,
+		);
+		const message = `The merge request is waiting for approvals. Required ${approvals.approvals_required}, but ${approvals.approvals_left} left.`;
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
 	if (
-		mergeRequestInfo.head_pipeline !== null &&
-		incompletePipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Checking ||
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.Unchecked
 	) {
-		return {
-			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
-			mergeRequestInfo,
-			user,
-		};
+		console.log(`[MR][${mergeRequestInfo.iid}] Still checking merge status`);
+		job.updateStatus(JobStatus.CHECKING_MERGE_STATUS);
+		return 'continue';
 	}
 
-	// the latest pipeline is incomplete / has failed
+	if (mergeRequestInfo.rebase_in_progress) {
+		console.log(`[MR][${mergeRequestInfo.iid}] Still rebasing`);
+		job.updateStatus(JobStatus.REBASING);
+		return 'continue';
+	}
+
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.NeedsRebase) {
+		console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
+		await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
+		await gitlabApi.rebaseMergeRequest(
+			mergeRequestInfo.target_project_id,
+			mergeRequestInfo.iid,
+		);
+		job.updateStatus(JobStatus.REBASING);
+		return 'continue';
+	}
+
+	const currentPipeline = mergeRequestInfo.head_pipeline;
+	if (currentPipeline === null) {
+		const message = `The merge request can't be merged. Pipeline does not exist`;
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (currentPipeline.status === PipelineStatus.Failed) {
+		const message = `The merge request can't be merged due to failing pipeline`;
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (currentPipeline.status === PipelineStatus.Skipped) {
+		const message = `The merge request can't be merged due to skipped pipeline`;
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
 	if (
-		mergeRequestInfo.head_pipeline !== null &&
-		incompletePipelineStatuses.includes(mergeRequestInfo.head_pipeline.status)
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiMustPass &&
+		[PipelineStatus.Manual, PipelineStatus.Canceled].includes(currentPipeline.status)
 	) {
-		return {
-			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
-			mergeRequestInfo,
-			user,
-		};
+		const jobs = uniqueNamedJobsByDate(
+			await gitlabApi.getPipelineJobs(mergeRequestInfo.target_project_id, currentPipeline.id),
+		);
+
+		// Mark pipeline as failed when a failed job is found
+		const failedJob = jobs.find(
+			(job) => !job.allow_failure && job.status === PipelineJobStatus.Failed,
+		);
+		if (failedJob !== undefined) {
+			console.log(
+				`[MR][${mergeRequestInfo.iid}] job in pipeline is in failed state: ${currentPipeline.status}, assigning back`,
+			);
+
+			await Promise.all([
+				assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+				sendNote(
+					gitlabApi,
+					mergeRequestInfo,
+					`The merge request can't be merged due to failing pipeline`,
+				),
+			]);
+
+			return 'done';
+		}
+
+		const manualJobsToRun = jobs.filter(
+			(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
+		);
+		const canceledJobsToRun = jobs.filter(
+			(job) => PipelineJobStatus.Canceled === job.status && !job.allow_failure,
+		);
+
+		if (manualJobsToRun.length > 0 || canceledJobsToRun.length > 0) {
+			if (!config.AUTORUN_MANUAL_BLOCKING_JOBS) {
+				console.log(
+					`[MR][${mergeRequestInfo.iid}] pipeline is waiting for a manual action: ${currentPipeline.status}, assigning back`,
+				);
+
+				await Promise.all([
+					assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+					sendNote(
+						gitlabApi,
+						mergeRequestInfo,
+						`The merge request can't be merged. Pipeline is waiting for a manual user action.`,
+					),
+				]);
+
+				return 'done';
+			}
+
+			console.log(
+				`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
+			);
+			job.updateStatus(JobStatus.WAITING_FOR_CI);
+			await Promise.all(
+				manualJobsToRun.map((job) =>
+					gitlabApi.runJob(mergeRequestInfo.target_project_id, job.id),
+				),
+			);
+			await Promise.all(
+				canceledJobsToRun.map((job) =>
+					gitlabApi.retryJob(mergeRequestInfo.target_project_id, job.id),
+				),
+			);
+			return 'continue';
+		}
 	}
 
-	if (
-		[DetailedMergeStatus.CiMustPass, DetailedMergeStatus.CiStillRunning].includes(
-			mergeRequestInfo.detailed_merge_status,
-		)
-	) {
-		return {
-			kind: AcceptMergeRequestResultKind.PipelineInProgress,
-			mergeRequestInfo,
-			user,
-			pipeline: mergeRequestInfo.head_pipeline,
-		};
+	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiStillRunning) {
+		await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.WaitingForPipeline]);
+		return 'continue';
 	}
 
+	if (mergeRequestInfo.detailed_merge_status !== DetailedMergeStatus.Mergeable) {
+		const message = `The merge request can't be merged due to unexpected merge status: ${mergeRequestInfo.detailed_merge_status}`;
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (mergeRequestInfo.merge_error !== null) {
+		const message = `The merge request can't be merged: ${mergeRequestInfo.merge_error}`;
+		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(gitlabApi, mergeRequestInfo, message),
+		]);
+
+		return 'done';
+	}
+
+	if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
+		await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting]);
+	}
+
+	if (config.DRY_RUN) {
+		console.log(`[MR][${mergeRequestInfo.iid}] Still checking merge status`);
+		job.updateStatus(JobStatus.CHECKING_MERGE_STATUS);
+		return 'continue';
+	}
+
+	return mergeMergeRequest({
+		mergeRequestInfo,
+		job,
+		gitlabApi,
+		config,
+		user,
+	});
+};
+
+export const mergeMergeRequest = async ({
+	mergeRequestInfo,
+	job,
+	gitlabApi,
+	config,
+	user,
+}: {
+	mergeRequestInfo: MergeRequestInfo;
+	job?: Job;
+	gitlabApi: GitlabApi;
+	config: Config;
+	user: User;
+}) => {
+	// Let's merge it
 	const useSquash = mergeRequestInfo.labels.includes(config.SKIP_SQUASHING_LABEL)
 		? false
 		: config.SQUASH_MERGE_REQUEST;
 	if (mergeRequestInfo.squash && !useSquash) {
 		// Because usage `squash=false` during accept MR has no effect and it just uses squash setting from the MR
-		await gitlabApi.updateMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid, {
-			squash: false,
-		});
-	}
-
-	if (config.DRY_RUN) {
-		return {
-			kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
-			mergeRequestInfo,
-			user,
-		};
+		await gitlabApi.updateMergeRequest(
+			mergeRequestInfo.target_project_id,
+			mergeRequestInfo.iid,
+			{
+				squash: false,
+			},
+		);
 	}
 
 	type BodyStructure = {
@@ -374,7 +418,7 @@ export const acceptMergeRequest = async (
 	}
 
 	const response = await gitlabApi.sendRawRequest(
-		`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`,
+		`/api/v4/projects/${mergeRequestInfo.target_project_id}/merge_requests/${mergeRequestInfo.iid}/merge`,
 		RequestMethod.Put,
 		requestBody,
 	);
@@ -387,38 +431,36 @@ export const acceptMergeRequest = async (
 				`[MR][${mergeRequestInfo.iid}] ${response.status} - cannot be merged but merge status is: ${mergeRequestInfo.detailed_merge_status}`,
 			);
 
-			return {
-				kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
-				mergeRequestInfo,
-				user,
-			};
+			if (job) {
+				job.updateStatus(JobStatus.CHECKING_MERGE_STATUS);
+			}
 		}
 
-		return {
-			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
-			mergeRequestInfo,
-			user,
-		};
+		return 'continue';
 	}
 
 	if (response.status === 409) {
 		console.log(
 			`[MR][${mergeRequestInfo.iid}] ${response.status} - SHA does not match HEAD of source branch`,
 		);
-		return {
-			kind: AcceptMergeRequestResultKind.InvalidSha,
-			mergeRequestInfo,
-			user,
-		};
+		return 'continue';
 	}
 
 	if (response.status === 401) {
-		console.log(`[MR][${mergeRequestInfo.iid}] ${response.status} - Unauthorized`);
-		return {
-			kind: AcceptMergeRequestResultKind.Unauthorized,
-			mergeRequestInfo,
-			user,
-		};
+		console.log(
+			`[MR][${mergeRequestInfo.iid}] You don't have permissions to accept this merge request, assigning back`,
+		);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequestInfo, user),
+			sendNote(
+				gitlabApi,
+				mergeRequestInfo,
+				`The merge request can't be merged due to insufficient authorization`,
+			),
+		]);
+
+		return 'done';
 	}
 
 	if (response.status !== 200) {
@@ -431,222 +473,5 @@ export const acceptMergeRequest = async (
 		throw new Error('Invalid response');
 	}
 
-	return {
-		kind: AcceptMergeRequestResultKind.SuccessfullyMerged,
-		mergeRequestInfo,
-		user,
-	};
-};
-
-export const runAcceptingMergeRequest = async (
-	job: Job,
-	gitlabApi: GitlabApi,
-	projectId: number,
-	mergeRequestIid: number,
-	user: User,
-	config: Config,
-): Promise<AcceptMergeRequestResult | void> => {
-	console.log(`[MR][${mergeRequestIid}] Checking...`);
-
-	const mergeResponse = await acceptMergeRequest(
-		gitlabApi,
-		projectId,
-		mergeRequestIid,
-		user,
-		config,
-	);
-	if (
-		mergeResponse.kind === AcceptMergeRequestResultKind.SuccessfullyMerged ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.NotOpenMergeRequest ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.Unauthorized ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.WorkInProgress ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.UnresolvedDiscussion ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.ReassignedMergeRequest ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.HasConflict
-	) {
-		return mergeResponse;
-	}
-
-	const mergeRequestInfo = mergeResponse.mergeRequestInfo;
-
-	if (!containsLabel(mergeRequestInfo.labels, BotLabels.Accepting)) {
-		await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting]);
-	}
-
-	const approvals = await gitlabApi.getMergeRequestApprovals(
-		mergeRequestInfo.project_id,
-		mergeRequestInfo.iid,
-	);
-	if (approvals.approvals_left > 0) {
-		return {
-			kind: AcceptMergeRequestResultKind.WaitingForApprovals,
-			mergeRequestInfo,
-			user,
-			approvals,
-		};
-	}
-
-	if (mergeRequestInfo.diverged_commits_count > 0) {
-		if (!mergeRequestInfo.rebase_in_progress && mergeRequestInfo.merge_error !== null) {
-			console.log(
-				`[MR][${mergeRequestInfo.iid}] Merge error after rebase: ${mergeRequestInfo.merge_error}`,
-			);
-			return {
-				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
-				mergeRequestInfo,
-				user,
-			};
-		}
-
-		console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
-		await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
-		await gitlabApi.rebaseMergeRequest(mergeRequestInfo.project_id, mergeRequestInfo.iid);
-		job.updateStatus(JobStatus.REBASING);
-		return;
-	}
-
-	if (mergeResponse.kind === AcceptMergeRequestResultKind.RebaseInProgress) {
-		console.log(`[MR][${mergeRequestInfo.iid}] Still rebasing`);
-		job.updateStatus(JobStatus.REBASING);
-		return;
-	}
-
-	if (mergeResponse.kind === AcceptMergeRequestResultKind.CheckingMergeStatus) {
-		console.log(`[MR][${mergeRequestInfo.iid}] Still checking merge status`);
-		job.updateStatus(JobStatus.CHECKING_MERGE_STATUS);
-		return;
-	}
-
-	const currentPipeline = mergeRequestInfo.head_pipeline;
-	if (currentPipeline !== null && currentPipeline.status === PipelineStatus.Failed) {
-		return {
-			kind: AcceptMergeRequestResultKind.FailedPipeline,
-			mergeRequestInfo,
-			user,
-			pipeline: currentPipeline,
-		};
-	}
-
-	if (
-		currentPipeline !== null &&
-		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiMustPass &&
-		[PipelineStatus.Manual, PipelineStatus.Canceled].includes(currentPipeline.status)
-	) {
-		const jobs = uniqueNamedJobsByDate(
-			await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
-		);
-
-		// Mark pipeline as failed when a failed job is found
-		const failedJob = jobs.find(
-			(job) => !job.allow_failure && job.status === PipelineJobStatus.Failed,
-		);
-		if (failedJob !== undefined) {
-			return {
-				kind: AcceptMergeRequestResultKind.FailedPipeline,
-				mergeRequestInfo,
-				user,
-				pipeline: currentPipeline,
-			};
-		}
-
-		const manualJobsToRun = jobs.filter(
-			(job) => PipelineJobStatus.Manual === job.status && !job.allow_failure,
-		);
-		const canceledJobsToRun = jobs.filter(
-			(job) => PipelineJobStatus.Canceled === job.status && !job.allow_failure,
-		);
-
-		if (manualJobsToRun.length > 0 || canceledJobsToRun.length > 0) {
-			if (!config.AUTORUN_MANUAL_BLOCKING_JOBS) {
-				return {
-					kind: AcceptMergeRequestResultKind.WaitingPipeline,
-					mergeRequestInfo,
-					user,
-					pipeline: currentPipeline,
-				};
-			}
-
-			console.log(
-				`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
-			);
-			job.updateStatus(JobStatus.WAITING_FOR_CI);
-			await Promise.all(
-				manualJobsToRun.map((job) => gitlabApi.runJob(mergeRequestInfo.project_id, job.id)),
-			);
-			await Promise.all(
-				canceledJobsToRun.map((job) =>
-					gitlabApi.retryJob(mergeRequestInfo.project_id, job.id),
-				),
-			);
-			return;
-		}
-	}
-
-	if (mergeResponse.kind === AcceptMergeRequestResultKind.PipelineInProgress) {
-		if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
-			await setBotLabels(gitlabApi, mergeRequestInfo, [
-				BotLabels.Accepting,
-				BotLabels.WaitingForPipeline,
-			]);
-		}
-
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] Waiting for CI. Merge status: ${mergeRequestInfo.detailed_merge_status}.${mergeResponse.pipeline !== null ? ` Current status: ${mergeResponse.pipeline.status}` : ''}`,
-		);
-		job.updateStatus(JobStatus.WAITING_FOR_CI);
-		return;
-	}
-
-	if (
-		mergeRequestInfo.detailed_merge_status !== DetailedMergeStatus.Mergeable &&
-		mergeRequestInfo.detailed_merge_status !== DetailedMergeStatus.Unchecked
-	) {
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Merge status is ${mergeRequestInfo.detailed_merge_status}`,
-		);
-		return {
-			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
-			mergeRequestInfo,
-			user,
-		};
-	}
-
-	if (currentPipeline === null) {
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`,
-		);
-		return {
-			kind: AcceptMergeRequestResultKind.InvalidPipeline,
-			mergeRequestInfo,
-			user,
-			pipeline: mergeRequestInfo.head_pipeline,
-		};
-	}
-
-	if (startingOrInProgressPipelineStatuses.includes(currentPipeline.status)) {
-		if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
-			await setBotLabels(gitlabApi, mergeRequestInfo, [
-				BotLabels.Accepting,
-				BotLabels.WaitingForPipeline,
-			]);
-		}
-
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] Waiting for CI. Current status: ${currentPipeline.status}`,
-		);
-		job.updateStatus(JobStatus.WAITING_FOR_CI);
-		return;
-	}
-
-	if (
-		currentPipeline.status !== PipelineStatus.Success &&
-		currentPipeline.status !== PipelineStatus.Skipped &&
-		currentPipeline.status !== PipelineStatus.Created
-	) {
-		throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
-	}
-
-	if (containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
-		await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.Accepting]);
-	}
+	return 'done';
 };

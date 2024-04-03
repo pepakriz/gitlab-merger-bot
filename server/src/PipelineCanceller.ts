@@ -17,12 +17,15 @@ export const tryCancelPipeline = async (
 	}
 
 	const mergeRequestPipeline = await gitlabApi.getPipeline(
-		mergeRequestInfo.project_id,
+		mergeRequestInfo.target_project_id,
 		mergeRequestInfo.head_pipeline.id,
 	);
 	if (mergeRequestPipeline.user.id !== user.id) {
 		return;
 	}
 
-	await gitlabApi.cancelPipeline(mergeRequestInfo.project_id, mergeRequestInfo.head_pipeline.id);
+	await gitlabApi.cancelPipeline(
+		mergeRequestInfo.target_project_id,
+		mergeRequestInfo.head_pipeline.id,
+	);
 };
