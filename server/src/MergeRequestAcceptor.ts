@@ -325,7 +325,12 @@ export const acceptMergeRequest = async (
 		}
 	}
 
-	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiStillRunning) {
+	if (
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiStillRunning ||
+		// I don't understand why the merge status is `ci_must_pass` instead of `ci_still_running`, but it is as it is. Maybe more values for currentPipeline.status should be added here, but let's try it in this way for now.
+		(mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiMustPass &&
+			currentPipeline.status === PipelineStatus.Running)
+	) {
 		await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.WaitingForPipeline]);
 		return 'continue';
 	}
