@@ -27,6 +27,7 @@ export enum DetailedMergeStatus {
 	NotOpen = 'not_open',
 	JiraAssociationMissing = 'jira_association_missing',
 	NeedsRebase = 'needs_rebase',
+	NeedRebase = 'need_rebase', // Wrong, but existing value. See https://gitlab.com/gitlab-org/gitlab/-/issues/454409
 	Conflict = 'conflict',
 	RequestedChanges = 'requested_changes',
 }

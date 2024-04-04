@@ -205,7 +205,10 @@ export const acceptMergeRequest = async (
 		return 'continue';
 	}
 
-	if (mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.NeedsRebase) {
+	if (
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.NeedsRebase ||
+		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.NeedRebase
+	) {
 		console.log(`[MR][${mergeRequestInfo.iid}] source branch is not up to date, rebasing`);
 		await tryCancelPipeline(gitlabApi, mergeRequestInfo, user);
 		await gitlabApi.rebaseMergeRequest(
