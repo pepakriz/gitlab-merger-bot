@@ -331,7 +331,7 @@ export const acceptMergeRequest = async (
 	}
 
 	if (mergeRequestInfo.detailed_merge_status !== DetailedMergeStatus.Mergeable) {
-		const message = `The merge request can't be merged due to unexpected merge status: ${mergeRequestInfo.detailed_merge_status}`;
+		const message = `The merge request can't be merged due to unexpected status. Merge status: ${mergeRequestInfo.detailed_merge_status} and pipeline status: ${currentPipeline.status}`;
 		console.log(`[MR][${mergeRequestInfo.iid}] merge failed: ${message}, assigning back`);
 
 		await Promise.all([
