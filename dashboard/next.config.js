@@ -4,9 +4,4 @@ module.exports = {
 		WS_URL: process.env.WS_URL,
 	},
 	output: 'export',
-	exportPathMap: function () {
-		return {
-			'/': { page: '/' },
-		};
-	},
 };
