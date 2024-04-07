@@ -63,6 +63,8 @@ spec:
           value: "{{ .Values.settings.httpServerPort }}"
         - name: WEB_HOOK_TOKEN
           value: "{{ .Values.settings.webHookToken }}"
+        - name: WEB_HOOK_HISTORY_SIZE
+          value: "{{ .Values.settings.webHookHistorySize }}"
         - name: ENABLE_PERMISSION_VALIDATION
           value: "{{ .Values.settings.enablePermissionValidation }}"
         {{- if .Values.settings.httpProxy }}

@@ -25,6 +25,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Icon from '@mui/icons-material/Send';
 import { UserAvatar } from '../components/ui/UserAvatar';
 import CircularProgress from '@mui/material/CircularProgress';
+import { NextPageWithLayout } from './_app';
 
 const Row = (props: GetQueuesSubscriptionJobFragment) => {
 	const [unassign, { loading }] = useMutation<UnassignMutation, UnassignMutationVariables>(gql`
@@ -112,7 +113,7 @@ const App = () => {
 	`);
 
 	return (
-		<Layout>
+		<>
 			<Typography variant={'h3'}>Queues</Typography>
 			<Box mt={4}>
 				{loading ? (
@@ -126,7 +127,7 @@ const App = () => {
 								</Typography>
 							</Toolbar>
 
-							<TableContainer component={Paper} key={queue.name}>
+							<TableContainer key={queue.name}>
 								<Table size='small' aria-label={queue.name}>
 									<TableHead>
 										<TableRow>
@@ -148,8 +149,10 @@ const App = () => {
 					))
 				)}
 			</Box>
-		</Layout>
+		</>
 	);
 };
 
-export default withApollo(App);
+App.getLayout = Layout;
+
+export default App;

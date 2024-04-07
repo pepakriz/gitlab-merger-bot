@@ -15,8 +15,15 @@ enum JobPriority {
 	NORMAL
 }
 
+enum WebHookHistoryStatus {
+	SKIPPED
+	SUCCESS
+	UNAUTHORIZED
+	INVALID_EVENT
+}
+
 enum JobStatus {
-	IN_PROGRESSJobStatus
+	IN_PROGRESS
 	REBASING
 	CHECKING_MERGE_STATUS
 	WAITING
@@ -37,6 +44,13 @@ type Queue {
 	name: String!
 	info: QueueInfo!
 	jobs: [Job!]!
+}
+
+type WebHookHistoryRequest {
+	createdAt: Int!
+	status: WebHookHistoryStatus!
+	event: String
+	data: String
 }
 
 type User {
@@ -60,6 +74,7 @@ type Query {
 
 type Subscription {
 	queues: [Queue!]!
+	webHookHistory: [WebHookHistoryRequest!]!
 }
 
 input UnassignInput {

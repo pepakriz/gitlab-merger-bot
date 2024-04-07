@@ -10,7 +10,7 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { PubSub } from 'graphql-subscriptions';
 import http from 'http';
 import { AppEvent } from './Types';
-import { Resolvers, typeDefs } from './generated/graphqlgen';
+import { Resolvers, typeDefs, WebHookHistoryStatus } from './generated/graphqlgen';
 import { Config } from './Config';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
@@ -19,6 +19,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 
 import { assignToAuthorAndResetLabels } from './AssignToAuthor';
 import { formatQueueId } from './Utils';
+import { WebHookHistory } from './WebHookHistory';
 
 interface MergeRequestAssignee {
 	username: string;
@@ -47,6 +48,13 @@ const containsAssignedUser = (mergeRequest: MergeRequestHook, user: User): boole
 	console.log('mergeRequest.assignees', mergeRequest.assignees);
 	const userNames = mergeRequest.assignees?.map((assignee) => assignee.username);
 	return userNames?.includes(user.username) ?? false;
+};
+
+type WebHookHistoryMessage = {
+	status: WebHookHistoryStatus;
+	event?: string;
+	data?: string;
+	createdAt: number;
 };
 
 const processMergeRequestHook = async (
@@ -85,6 +93,7 @@ export class WebHookServer {
 	private readonly worker: Worker;
 	private readonly user: User;
 	private readonly config: Config;
+	private readonly webHookHistory: WebHookHistory<WebHookHistoryMessage>;
 
 	constructor(pubSub: PubSub, gitlabApi: GitlabApi, worker: Worker, user: User, config: Config) {
 		this.pubSub = pubSub;
@@ -92,6 +101,7 @@ export class WebHookServer {
 		this.worker = worker;
 		this.user = user;
 		this.config = config;
+		this.webHookHistory = new WebHookHistory(config.WEB_HOOK_HISTORY_SIZE);
 	}
 
 	public stop(): Promise<void> {
@@ -145,32 +155,53 @@ export class WebHookServer {
 
 			app.use(bodyParser.json());
 			app.post('/', async (req, res) => {
-				const token = req.headers['x-gitlab-token'];
-				if (!token || token !== this.config.WEB_HOOK_TOKEN) {
-					res.sendStatus(405);
-					res.send(`No X-Gitlab-Token found on request or the token did not match`);
-					return;
-				}
+				let webHookHistoryMessage: WebHookHistoryMessage = {
+					status: WebHookHistoryStatus.UNAUTHORIZED,
+					createdAt: Math.floor(Date.now() / 1000),
+				};
 
-				const event = req.headers['x-gitlab-event'];
-				if (!event) {
-					res.sendStatus(405);
-					res.send(`No X-Gitlab-Event found on request`);
-					return;
-				}
+				try {
+					const token = req.headers['x-gitlab-token'];
+					if (!token || token !== this.config.WEB_HOOK_TOKEN) {
+						res.sendStatus(405);
+						res.send(`No X-Gitlab-Token found on request or the token did not match`);
+						return;
+					}
 
-				const data = req.body;
-				if (event === Events.MergeRequest) {
-					await processMergeRequestHook(
-						this.gitlabApi,
-						this.worker,
-						this.user,
-						data as MergeRequestHook,
-						this.config,
-					);
-				}
+					const event = req.headers['x-gitlab-event'];
+					if (!(typeof event === 'string')) {
+						webHookHistoryMessage.status = WebHookHistoryStatus.INVALID_EVENT;
 
-				res.send('ok');
+						res.sendStatus(405);
+						res.send(`No X-Gitlab-Event found on request`);
+						return;
+					}
+
+					const data = req.body;
+
+					webHookHistoryMessage = {
+						...webHookHistoryMessage,
+						status: WebHookHistoryStatus.SKIPPED,
+						data: JSON.stringify(data),
+						event,
+					};
+
+					if (event === Events.MergeRequest) {
+						webHookHistoryMessage.status = WebHookHistoryStatus.SUCCESS;
+						await processMergeRequestHook(
+							this.gitlabApi,
+							this.worker,
+							this.user,
+							data as MergeRequestHook,
+							this.config,
+						);
+					}
+
+					res.send('ok');
+				} finally {
+					this.webHookHistory.add(webHookHistoryMessage);
+					await this.pubSub.publish(AppEvent.WEB_HOOK_HISTORY_CHANGED, {});
+				}
 			});
 
 			const mapUser = (user: User) => ({
@@ -206,6 +237,23 @@ export class WebHookServer {
 							}, 1);
 							return this.pubSub.asyncIterator([
 								AppEvent.QUEUE_CHANGED,
+								listenerName,
+							]) as unknown as AsyncIterable<any>;
+						},
+					},
+					webHookHistory: {
+						resolve: () => this.webHookHistory.getHistory(),
+						subscribe: () => {
+							const listenerName = `subscription_${uuid()}`;
+							setTimeout(() => {
+								this.pubSub
+									.publish(listenerName, {})
+									.catch((error) =>
+										console.log(`Error: ${JSON.stringify(error)}`),
+									);
+							}, 1);
+							return this.pubSub.asyncIterator([
+								AppEvent.WEB_HOOK_HISTORY_CHANGED,
 								listenerName,
 							]) as unknown as AsyncIterable<any>;
 						},

@@ -4,17 +4,24 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import React from 'react';
 import Container from '@mui/material/Container';
-import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
 import { useQuery } from '@apollo/client';
 import { MeQuery } from '../types';
 import gql from 'graphql-tag';
+import { Tab, Tabs } from '@mui/material';
+import { useRouter } from 'next/router';
 
-interface LayoutProps {
-	children: React.ReactNode;
-}
+const pages = {
+	'/': {
+		label: 'Merge Queue',
+	},
+	'/web-hook-history': {
+		label: 'Web Hook History',
+	},
+};
 
-export const Layout = ({ children }: LayoutProps) => {
+export const Layout = (children: React.ReactElement) => {
+	const router = useRouter();
 	const { data } = useQuery<MeQuery>(gql`
 		query Me {
 			me {
@@ -24,21 +31,34 @@ export const Layout = ({ children }: LayoutProps) => {
 		}
 	`);
 
+	const tabIndex = Object.keys(pages).findIndex((path) => router.pathname === path);
+
 	return (
 		<>
-			<AppBar position='relative'>
+			<AppBar position='fixed'>
 				<Toolbar>
 					<Avatar alt='Remy Sharp' src={data?.me.avatarUrl} />
 					&nbsp;&nbsp;&nbsp;
 					<Typography variant='h6'>{data?.me.name}</Typography>
+					<Tabs
+						value={tabIndex}
+						onChange={() => {}}
+						textColor='inherit'
+						sx={{
+							px: 6,
+							'& .MuiTabs-indicator': {
+								backgroundColor: '#ffffff',
+							},
+						}}
+					>
+						{Object.entries(pages).map(([path, { label }]) => (
+							<Tab key={path} label={label} onClick={() => router.push(path)} />
+						))}
+					</Tabs>
 				</Toolbar>
 			</AppBar>
 			<Container maxWidth={'lg'}>
-				<Paper elevation={3}>
-					<Box mt={4} p={4}>
-						{children}
-					</Box>
-				</Paper>
+				<Box mt={12}>{children}</Box>
 			</Container>
 		</>
 	);

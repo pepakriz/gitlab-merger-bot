@@ -12,13 +12,12 @@ import {
 } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { HttpLink } from '@apollo/client/link/http';
-import { WebSocketLink } from '@apollo/client/link/ws';
 
 type TApolloClient = ApolloClient<NormalizedCacheObject>;
 
 type InitialProps = {
-	apolloClient: TApolloClient;
-	apolloState: any;
+	apolloClient?: TApolloClient;
+	apolloState?: any;
 } & Record<string, any>;
 
 type WithApolloPageContext = {

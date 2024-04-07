@@ -103,6 +103,7 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `HTTP_SERVER_ENABLE`           | `false`              | It'll enable experimental API and dashboard support                        |
 | `HTTP_SERVER_PORT`             | `4000`               | It'll use different http server port                                       |
 | `WEB_HOOK_TOKEN`               | ``                   | It'll enable experimental web hook support                                 |
+| `WEB_HOOK_HISTORY_SIZE`        | `100`                | It's useful just primarily for debugging purposes.                         |
 | `ENABLE_PERMISSION_VALIDATION` | `false`              | It'll enable experimental permission validation                            |
 
 ## Development
@@ -110,6 +111,6 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 For web hook development use this:
 
 ```bash
-NGROK_AUTH=<authCode>
-docker run -it --rm --net=host -p 4040:4040 -e NGROK_AUTH="$NGROK_AUTH" wernight/ngrok ngrok http 4000
+export NGROK_AUTHTOKEN=<authCode>
+docker run -it --rm --net=host -p 4040:4040 -e NGROK_AUTHTOKEN="$NGROK_AUTHTOKEN" wernight/ngrok ngrok http 4000
 ```

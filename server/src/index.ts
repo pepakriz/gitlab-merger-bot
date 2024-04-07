@@ -38,11 +38,27 @@ const worker = new Worker(pubSub, config);
 
 	console.log(`[bot] Hi, I'm ${user.name}. I'll accept merge request assigned to me.`);
 
-	const mergeRequestCheckerLoop = new MergeRequestCheckerLoop(gitlabApi, config, user, worker);
+	const shutdownHandlers: (() => Promise<any>)[] = [];
 	const webHookServer = new WebHookServer(pubSub, gitlabApi, worker, user, config);
 
-	mergeRequestCheckerLoop.start();
+	if (config.MR_CHECK_INTERVAL > 0) {
+		const mergeRequestCheckerLoop = new MergeRequestCheckerLoop(
+			gitlabApi,
+			config,
+			user,
+			worker,
+		);
+		mergeRequestCheckerLoop.start();
+		shutdownHandlers.push(() => mergeRequestCheckerLoop.stop());
+	} else {
+		console.log(
+			`[bot] The merge request checker loop is disabled, because MR_CHECK_INTERVAL is set to zero.`,
+		);
+	}
+
 	worker.start();
+	shutdownHandlers.push(() => worker.stop());
+
 	if (config.HTTP_SERVER_ENABLE) {
 		await webHookServer.start();
 	}
@@ -50,7 +66,9 @@ const worker = new Worker(pubSub, config);
 	const shutdownHandler = async (signal: NodeJS.Signals) => {
 		console.log(`[bot] Caught ${signal} signal`);
 
-		const promises: Promise<any>[] = [mergeRequestCheckerLoop.stop(), worker.stop()];
+		const promises: Promise<any>[] = shutdownHandlers.map((shutdownHandler) =>
+			shutdownHandler(),
+		);
 
 		if (config.HTTP_SERVER_ENABLE) {
 			promises.push(webHookServer.stop());

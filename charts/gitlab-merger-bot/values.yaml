@@ -89,6 +89,7 @@ settings:
   httpServerEnable: false
   httpServerPort: 4000
   webHookToken: ""
+  webHookHistorySize: 100
   httpProxySecretName: http-proxy
   httpProxy: ""
   enablePermissionValidation: false

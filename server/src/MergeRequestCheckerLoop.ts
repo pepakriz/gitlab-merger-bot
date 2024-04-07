@@ -46,7 +46,7 @@ export class MergeRequestCheckerLoop {
 				this.timer = setTimeout(() => {
 					this.timer = null;
 					this.loop().catch((error) => console.error(`Error: ${JSON.stringify(error)}`));
-				}, this.config.CI_CHECK_INTERVAL);
+				}, this.config.MR_CHECK_INTERVAL);
 			});
 	}
 
