@@ -150,6 +150,7 @@ export class WebHookServer {
 			app.use(
 				express.static(path.join(process.cwd(), 'dashboard/out'), {
 					index: 'index.html',
+					extensions: ['html'],
 				}),
 			);
 
