@@ -153,7 +153,11 @@ export class WebHookServer {
 				}),
 			);
 
-			app.use(bodyParser.json());
+			app.use(
+				bodyParser.json({
+					limit: '2mb',
+				}),
+			);
 			app.post('/', async (req, res) => {
 				let webHookHistoryMessage: WebHookHistoryMessage = {
 					status: WebHookHistoryStatus.UNAUTHORIZED,
