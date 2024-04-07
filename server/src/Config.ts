@@ -4,7 +4,7 @@ export const defaultConfig = {
 	GITLAB_URL: 'https://gitlab.com',
 	GITLAB_AUTH_TOKEN: '',
 	CI_CHECK_INTERVAL: 5,
-	MR_CHECK_INTERVAL: 20,
+	MR_CHECK_INTERVAL: 5,
 	REMOVE_BRANCH_AFTER_MERGE: true,
 	SQUASH_MERGE_REQUEST: true,
 	PREFER_GITLAB_TEMPLATE: false,
@@ -14,6 +14,7 @@ export const defaultConfig = {
 	HTTP_SERVER_ENABLE: false,
 	HTTP_SERVER_PORT: 4000,
 	WEB_HOOK_TOKEN: '',
+	WEB_HOOK_HISTORY_SIZE: 100,
 	DRY_RUN: false,
 	HTTP_PROXY: '',
 	ENABLE_PERMISSION_VALIDATION: false,
@@ -66,6 +67,10 @@ export const getConfig = (): Config => ({
 		.default(`${defaultConfig.HTTP_SERVER_PORT}`)
 		.asPortNumber(),
 	WEB_HOOK_TOKEN: env.get('WEB_HOOK_TOKEN').default(defaultConfig.WEB_HOOK_TOKEN).asString(),
+	WEB_HOOK_HISTORY_SIZE: env
+		.get('WEB_HOOK_HISTORY_SIZE')
+		.default(defaultConfig.WEB_HOOK_HISTORY_SIZE)
+		.asIntPositive(),
 	DRY_RUN: env.get('DRY_RUN').default(`${defaultConfig.DRY_RUN}`).asBoolStrict(),
 	HTTP_PROXY: env.get('HTTP_PROXY').default('').asString(),
 	ENABLE_PERMISSION_VALIDATION: env

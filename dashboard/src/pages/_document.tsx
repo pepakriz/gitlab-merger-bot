@@ -19,7 +19,7 @@ export default function AppDocument(props: DocumentProps & DocumentHeadTagsProps
 				/>
 				<DocumentHeadTags {...props} />
 			</Head>
-			<body>
+			<body style={{ backgroundColor: '#f8f8f8' }}>
 				<Main />
 				<NextScript />
 			</body>
