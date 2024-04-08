@@ -1,3 +1,5 @@
+'use client';
+
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -9,7 +11,8 @@ import { useQuery } from '@apollo/client';
 import { MeQuery } from '../types';
 import gql from 'graphql-tag';
 import { Tab, Tabs } from '@mui/material';
-import { useRouter } from 'next/router';
+import { usePathname, useRouter } from 'next/navigation';
+import { Route } from 'next';
 
 const pages = {
 	'/': {
@@ -18,9 +21,10 @@ const pages = {
 	'/web-hook-history': {
 		label: 'Web Hook History',
 	},
-};
+} satisfies Record<Route, { label: string }>;
 
-export const Layout = (children: React.ReactElement) => {
+export const Layout = ({ children }: { children: React.ReactElement }) => {
+	const pathname = usePathname();
 	const router = useRouter();
 	const { data } = useQuery<MeQuery>(gql`
 		query Me {
@@ -31,7 +35,7 @@ export const Layout = (children: React.ReactElement) => {
 		}
 	`);
 
-	const tabIndex = Object.keys(pages).findIndex((path) => router.pathname === path);
+	const tabIndex = Object.keys(pages).findIndex((path) => pathname === path);
 
 	return (
 		<>
@@ -63,5 +67,3 @@ export const Layout = (children: React.ReactElement) => {
 		</>
 	);
 };
-
-export default Layout;
