@@ -47,6 +47,7 @@ type Queue {
 }
 
 type WebHookHistoryRequest {
+	id: String!
 	createdAt: Int!
 	status: WebHookHistoryStatus!
 	event: String

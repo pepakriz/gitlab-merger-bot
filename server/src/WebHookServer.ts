@@ -26,9 +26,6 @@ interface MergeRequestAssignee {
 }
 
 interface MergeRequestHook {
-	// project: {
-	// 	id: number;
-	// };
 	object_attributes: {
 		id: number;
 		iid: number;
@@ -51,6 +48,7 @@ const containsAssignedUser = (mergeRequest: MergeRequestHook, user: User): boole
 };
 
 type WebHookHistoryMessage = {
+	id: string;
 	status: WebHookHistoryStatus;
 	event?: string;
 	data?: string;
@@ -161,6 +159,7 @@ export class WebHookServer {
 			);
 			app.post('/', async (req, res) => {
 				let webHookHistoryMessage: WebHookHistoryMessage = {
+					id: uuid(),
 					status: WebHookHistoryStatus.UNAUTHORIZED,
 					createdAt: Math.floor(Date.now() / 1000),
 				};
