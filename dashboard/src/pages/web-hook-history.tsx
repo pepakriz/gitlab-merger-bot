@@ -76,6 +76,7 @@ const App = () => {
 	const { loading, error, data } = useSubscription<GetWebHookHistorySubscriptionSubscription>(gql`
 		subscription GetWebHookHistorySubscription {
 			webHookHistory {
+				id
 				createdAt
 				data
 				event
@@ -104,10 +105,7 @@ const App = () => {
 							</TableHead>
 							<TableBody>
 								{data?.webHookHistory.map((webHookHistory) => (
-									<Row
-										key={webHookHistory.createdAt}
-										webHookHistory={webHookHistory}
-									/>
+									<Row key={webHookHistory.id} webHookHistory={webHookHistory} />
 								))}
 							</TableBody>
 						</Table>
