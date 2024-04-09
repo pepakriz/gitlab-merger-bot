@@ -310,7 +310,6 @@ export const acceptMergeRequest = async (
 			console.log(
 				`[MR][${mergeRequestInfo.iid}] there are some blocking manual or canceled. triggering again`,
 			);
-			job.updateStatus(JobStatus.WAITING_FOR_CI);
 			await Promise.all(
 				manualJobsToRun.map((job) =>
 					gitlabApi.runJob(mergeRequestInfo.target_project_id, job.id),
@@ -321,6 +320,7 @@ export const acceptMergeRequest = async (
 					gitlabApi.retryJob(mergeRequestInfo.target_project_id, job.id),
 				),
 			);
+			job.updateStatus(JobStatus.WAITING_FOR_CI);
 			return 'continue';
 		}
 	}
@@ -332,6 +332,7 @@ export const acceptMergeRequest = async (
 			[PipelineStatus.Running, PipelineStatus.Created].includes(currentPipeline.status))
 	) {
 		await setBotLabels(gitlabApi, mergeRequestInfo, [BotLabels.WaitingForPipeline]);
+		job.updateStatus(JobStatus.WAITING_FOR_CI);
 		return 'continue';
 	}
 
