@@ -1,12 +1,12 @@
+'use client';
+
 import React from 'react';
-import { withApollo } from '../lib/apollo';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Layout from '../components/layout';
 import { useSubscription } from '@apollo/client';
 import gql from 'graphql-tag';
-import OverlayLoading from '../components/ui/overlay-loading';
-import { GetWebHookHistorySubscriptionSubscription } from '../types';
+import OverlayLoading from '../../components/ui/overlay-loading';
+import { GetWebHookHistorySubscriptionSubscription } from '../../types';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -15,7 +15,6 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
-import Icon from '@mui/icons-material/Send';
 import { Collapse } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 
@@ -72,7 +71,7 @@ const Row = ({
 	);
 };
 
-const App = () => {
+export default function Page() {
 	const { loading, error, data } = useSubscription<GetWebHookHistorySubscriptionSubscription>(gql`
 		subscription GetWebHookHistorySubscription {
 			webHookHistory {
@@ -114,8 +113,4 @@ const App = () => {
 			</Box>
 		</>
 	);
-};
-
-App.getLayout = Layout;
-
-export default App;
+}

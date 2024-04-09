@@ -1,86 +1,15 @@
-import { NextPage, NextPageContext } from 'next';
-import React from 'react';
 import { createClient } from 'graphql-ws';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 
-import {
-	ApolloProvider,
-	ApolloClient,
-	InMemoryCache,
-	NormalizedCacheObject,
-	split,
-} from '@apollo/client';
+import { ApolloClient, InMemoryCache, NormalizedCacheObject, split } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { HttpLink } from '@apollo/client/link/http';
 
 type TApolloClient = ApolloClient<NormalizedCacheObject>;
 
-type InitialProps = {
-	apolloClient?: TApolloClient;
-	apolloState?: any;
-} & Record<string, any>;
-
-type WithApolloPageContext = {
-	apolloClient: TApolloClient;
-} & NextPageContext;
-
 let globalApolloClient: TApolloClient;
 
-export function withApollo(PageComponent: NextPage, { ssr = true } = {}) {
-	const WithApollo = ({ apolloClient, apolloState, ...pageProps }: InitialProps) => {
-		const client = apolloClient || initApolloClient(apolloState);
-		return (
-			<ApolloProvider client={client}>
-				<PageComponent {...pageProps} />
-			</ApolloProvider>
-		);
-	};
-
-	if (ssr || PageComponent.getInitialProps) {
-		WithApollo.getInitialProps = async (ctx: WithApolloPageContext) => {
-			const { AppTree } = ctx;
-			const apolloClient = (ctx.apolloClient = initApolloClient());
-
-			let pageProps = {};
-			if (PageComponent.getInitialProps) {
-				pageProps = await PageComponent.getInitialProps(ctx);
-			}
-
-			if (typeof window === 'undefined') {
-				if (ctx.res && ctx.res.finished) {
-					return pageProps;
-				}
-
-				if (ssr) {
-					try {
-						const { getDataFromTree } = await import('@apollo/client/react/ssr');
-						await getDataFromTree(
-							<AppTree
-								pageProps={{
-									...pageProps,
-									apolloClient,
-								}}
-							/>,
-						);
-					} catch (error) {
-						console.error('Error while running `getDataFromTree`', error);
-					}
-				}
-			}
-
-			const apolloState = apolloClient.cache.extract();
-
-			return {
-				...pageProps,
-				apolloState,
-			};
-		};
-	}
-
-	return WithApollo;
-}
-
-function initApolloClient(initialState?: {}) {
+export function initApolloClient(initialState?: {}) {
 	if (typeof window === 'undefined') {
 		return createApolloClient(initialState);
 	}
@@ -92,7 +21,7 @@ function initApolloClient(initialState?: {}) {
 	return globalApolloClient;
 }
 
-function createApolloClient(initialState = {}) {
+export function createApolloClient(initialState = {}) {
 	const ssrMode = typeof window === 'undefined';
 	const cache = new InMemoryCache().restore(initialState);
 

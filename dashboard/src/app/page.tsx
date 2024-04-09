@@ -1,8 +1,8 @@
+'use client';
+
 import React from 'react';
-import { withApollo } from '../lib/apollo';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Layout from '../components/layout';
 import { useMutation, useSubscription } from '@apollo/client';
 import gql from 'graphql-tag';
 import OverlayLoading from '../components/ui/overlay-loading';
@@ -25,7 +25,6 @@ import Toolbar from '@mui/material/Toolbar';
 import Icon from '@mui/icons-material/Send';
 import { UserAvatar } from '../components/ui/UserAvatar';
 import CircularProgress from '@mui/material/CircularProgress';
-import { NextPageWithLayout } from './_app';
 
 const Row = (props: GetQueuesSubscriptionJobFragment) => {
 	const [unassign, { loading }] = useMutation<UnassignMutation, UnassignMutationVariables>(gql`
@@ -83,7 +82,7 @@ const Row = (props: GetQueuesSubscriptionJobFragment) => {
 	);
 };
 
-const App = () => {
+export default function Page() {
 	const { loading, error, data } = useSubscription<GetQueuesSubscriptionSubscription>(gql`
 		fragment GetQueuesSubscriptionJob on Job {
 			status
@@ -151,8 +150,4 @@ const App = () => {
 			</Box>
 		</>
 	);
-};
-
-App.getLayout = Layout;
-
-export default App;
+}
