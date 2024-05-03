@@ -254,7 +254,9 @@ export const acceptMergeRequest = async (
 	}
 
 	if (
-		mergeRequestInfo.detailed_merge_status === DetailedMergeStatus.CiMustPass &&
+		[DetailedMergeStatus.CiMustPass, DetailedMergeStatus.CiStillRunning].includes(
+			mergeRequestInfo.detailed_merge_status,
+		) &&
 		[PipelineStatus.Manual, PipelineStatus.Canceled].includes(currentPipeline.status)
 	) {
 		const jobs = uniqueNamedJobsByDate(
