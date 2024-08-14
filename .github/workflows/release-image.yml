@@ -33,4 +33,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: "pepakriz/gitlab-merger-bot:latest,pepakriz/gitlab-merger-bot:${{ env.RELEASE_VERSION }}",
+          tags: "${{ secrets.DOCKER_NAMESPACE }}/gitlab-merger-bot:latest,${{ secrets.DOCKER_NAMESPACE }}/gitlab-merger-bot:${{ env.RELEASE_VERSION }}",
